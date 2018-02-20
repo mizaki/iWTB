@@ -2,6 +2,7 @@ iwtb = LibStub("AceAddon-3.0"):NewAddon("iWTB", "AceConsole-3.0")
 
 function iwtb:OnInitialize()
   -- Called when the addon is loaded
+  self:Print("Loading iWTB")
   
   -- DB defaults
   local defaults = {
@@ -13,9 +14,8 @@ function iwtb:OnInitialize()
   self.db = LibStub("AceDB-3.0"):New("iWTBDB", defaults)
   local L = LibStub("AceLocale-3.0"):GetLocale("iWTB")
   
-  self:Print("Loading iWTB")
   
-  optionsTable = {
+  options = {
     type = "group",
     args = {
       settingsHeader = {
@@ -43,7 +43,7 @@ function iwtb:OnInitialize()
       },
     }
   }
-    LibStub("AceConfig-3.0"):RegisterOptionsTable("WelcomeHome", options, {"iwtb"})
+    LibStub("AceConfig-3.0"):RegisterOptionsTable("iWTB", options, {"iwtb"})
 end
 
 function iwtb:OnEnable()
