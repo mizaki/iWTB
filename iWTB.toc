@@ -10,8 +10,8 @@
 embeds.xml
 
 --Locale Translations
---Locales\Locales.xml
-enGB.lua
+Locales\Locales.xml
+
 
 
 Core.lua
