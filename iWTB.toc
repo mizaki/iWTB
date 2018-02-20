@@ -1,0 +1,17 @@
+## Interface: 70300
+## Version: 0.01
+## Title: iWTB
+## Author: Your Name Here
+## Notes: Helps organise which raider wants which boss.
+## SavedVariables: iWTBDB
+## OptionalDeps: Ace3
+## X-Embeds: Ace3
+
+embeds.xml
+
+--Locale Translations
+--Locales\Locales.xml
+enGB.lua
+
+
+Core.lua
