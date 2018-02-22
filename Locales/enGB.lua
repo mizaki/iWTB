@@ -4,6 +4,9 @@ print("Loading enGB")
 
 local L = LibStub("AceLocale-3.0"):NewLocale("iWTB", "enGB", true)
 
+L["Raider"] = true
+L["Raid Leader"] = true
+L["Expansion"] = true
 L["Request an update from a player when they join the raid"] = true
 L["Request update on player join"] = true
 L["Sync only with guild members"] = true
