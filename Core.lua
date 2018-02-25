@@ -8,6 +8,34 @@ local AceGUI = LibStub("AceGUI-3.0")
   
 -- API Calls and functions
 
+--http://lua-users.org/wiki/CsvUtils
+function fromCSV (s)
+  local seperator = ','
+  s = s .. seperator        -- ending comma
+  local t = {}        -- table to collect fields
+  local fieldstart = 1
+  repeat
+    -- next field is quoted? (start with `"'?)
+    if string.find(s, '^"', fieldstart) then
+      local a, c
+      local i  = fieldstart
+      repeat
+        -- find closing quote
+        a, i, c = string.find(s, '"("?)', i+1)
+      until c ~= '"'    -- quote not followed by quote?
+      if not i then error('unmatched "') end
+      local f = string.sub(s, fieldstart+1, i-1)
+      table.insert(t, (string.gsub(f, '""', '"')))
+      fieldstart = string.find(s, seperator, i) + 1
+    else                -- unquoted; find next comma
+      local nexti = string.find(s, seperator, fieldstart)
+      table.insert(t, string.sub(s, fieldstart, nexti-1))
+      fieldstart = nexti + 1
+    end
+  until fieldstart > string.len(s)
+  return t
+end
+
 --Interate through the guild ranks and save index and name in table
 local function getGuildRanks() 
   local numRanks = GuildControlGetNumRanks()
@@ -37,23 +65,60 @@ end
 local function getInstances(expacID)
   EJ_SelectTier(expacID)
   local tierRaidInstances = {}
-  
+  tierRaidInstances.raids = {}
+  tierRaidInstances.order = {}
   local i = 1
-  while EJ_GetInstanceByIndex(i) do
-    local instanceInfo = EJ_GetInstanceByIndex(i)
-    if instanceInfo[10] then
-      table.insert(tierRaidInstances, instanceInfo[1], instanceInfo[2])
+  local raidCounter = 1
+  local finished = false
+  
+  repeat
+    local instanceInfoID = EJ_GetInstanceByIndex(i,true)  -- Returns string ID _ONLY_
+    
+    if instanceInfoID == nil then finished = true
+    else
+      local isRaid = select("10",EJ_GetInstanceByIndex(i,true))
+      local raidTitle = select("2",EJ_GetInstanceByIndex(i,true))
+      
+      if isRaid then
+        table.insert(tierRaidInstances.raids, instanceInfoID, raidTitle)
+        table.insert(tierRaidInstances.order, raidCounter , instanceInfoID)
+        raidCounter = raidCounter + 1
+      end
+      
+      i = i +1
+      --break loop in case we fuck up
+      if i == 30 then finished = true end
     end
     
-    i = i +1
-  end
+  until finished
   
   return tierRaidInstances
 end
 
-local function getExpBosses(raidID)
-  local expacBosses = {}
-
+local function getBosses(raidID)
+  local raidBosses = {}
+  raidBosses.bosses = {}
+  raidBosses.order = {}
+  local i = 1
+  local finished = false
+  
+  repeat
+    
+    if EJ_GetEncounterInfoByIndex(i, raidID) == nil then finished = true
+    else
+      local bossName = select(1, EJ_GetEncounterInfoByIndex(i, raidID))
+      local bossID = select(3, EJ_GetEncounterInfoByIndex(i, raidID))
+      table.insert(raidBosses.bosses, bossID, bossName)
+      table.insert(raidBosses.order, i, bossID)
+      --print("BossID: " .. bossID .. " Boss: " .. bossName)
+    end
+    
+    i = i + 1
+    --break loop in case we fuck up
+    if i == 30 then finished = true end
+  until finished
+  
+  return raidBosses
 end
 
 function iwtb:OnInitialize()
@@ -164,11 +229,62 @@ function iwtb:OnInitialize()
     desc:SetFullWidth(true)
     container:AddChild(desc)
     
+    local bosses = AceGUI:Create("Dropdown")
+    bosses:SetText(L["Bosses"])
+    bosses:SetWidth(200)
+    bosses:SetList({L["Select raid"]})
+    bosses:SetCallback("OnValueChanged", function(boss)
+
+    end)
+    
+    local raid = AceGUI:Create("Dropdown")
+    raid:SetText(L["Raid"])
+    raid:SetWidth(200)
+    raid:SetList({L["Select expansion"]})
+    raid:SetCallback("OnValueChanged", function(instance)
+      local bossesInfo = getBosses(instance.value)
+
+      bosses:SetList(bossesInfo.bosses, bossesInfo.order)
+    
+    end)
+    
     local expansion = AceGUI:Create("Dropdown")
     expansion:SetText(L["Expansion"])
     expansion:SetWidth(200)
     expansion:SetList(expacsInfo)
+    expansion:SetCallback("OnValueChanged", function(expac)
+      local raidInfo = getInstances(expac.value)
+      raid:SetList(raidInfo.raids, raidInfo.order)
+    end)
+    
     container:AddChild(expansion)
+    container:AddChild(raid)
+    container:AddChild(bosses)
+    
+    
+    
+    local dumpVar = AceGUI:Create("Button")
+    dumpVar:SetText("Dump var")
+    dumpVar:SetWidth(200)
+    dumpVar:SetCallback("OnClick", function(but)
+      local test = getInstances(7)
+      for key, value in pairs(test.raids) do
+          print(key, value)
+      end
+      for key, value in pairs(test.order) do
+          print(key, value)
+      end
+      --self:Print(test[1])
+      --self:Print(type(EJ_GetInstanceByIndex(1,true)))
+      --self:Print(fromCSV(type(EJ_GetInstanceByIndex(1,true))))
+      --self:Print(fromCSV(EJ_GetInstanceInfo(822))[1])
+      --print(select("#", EJ_GetInstanceInfo(822)))
+      --print(select(1, EJ_GetInstanceInfo(822)))
+      --print(select(2, EJ_GetInstanceInfo(822)))
+      --print(select(3, EJ_GetInstanceInfo(822)))
+      --print(select(9, EJ_GetInstanceInfo(822)))
+    end)
+    container:AddChild(dumpVar)
   end
 
   -- function that draws the widgets for the second tab
