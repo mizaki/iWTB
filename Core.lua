@@ -1,5 +1,5 @@
 iwtb = LibStub("AceAddon-3.0"):NewAddon("iWTB", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0")
-local Serializer = LibStub("AceSerializer-3.0")
+--local Serializer = LibStub("AceSerializer-3.0")
 local AceGUI = LibStub("AceGUI-3.0")
 local L = LibStub("AceLocale-3.0"):GetLocale("iWTB")
 
@@ -7,15 +7,18 @@ local L = LibStub("AceLocale-3.0"):GetLocale("iWTB")
 local db
 local raiderDB
 local raidLeaderDB
-local rankInfo = {}
+local commSpec = 1 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
+local rankInfo = {} -- Guild rank info
 local expacInfo = nil
 local tierRaidInstances = nil
 local frame
-local windowframe
-local raiderFrame
-local rlMainFrame
+local windowframe -- main frame
+local raiderFrame -- raider tab frame
+local rlMainFrame -- raid leader tab frame
 local createMainFrame
-local raiderBossListFrame
+local raiderBossListFrame -- main frame listing bosses (raider)
+local bossFrame -- table of frames containing each boss frame
+local raiderBossesStr = "" -- raider boss desire seralised
 local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
 
@@ -38,9 +41,9 @@ local GUItabButtonSizeY = 30
 local function printTable(table)
   --print(type(table))
   if type(table) == "table" then
-    if table == nil then print("Empty table") end
+    if table == nil then print("Empty table") end -- this won't work?
     for key, value in pairs(table) do
-        print(key, value)
+        print("k: " .. key .. " v: " .. value)
     end
   end
 end
@@ -139,12 +142,15 @@ function iwtb:OnInitialize()
   local raiderDefaults = {  -- bosses[id].desire
     char = {
       bosses = {},
+      bossListHash = "", -- this is the hash of all bosses to be sent for comparision with the RL data
     },
   }
   
   
   local raiderLeaderDefaults = { -- is there any? boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
-  
+    char = {
+      raiders = {}, -- Do we want to organise by tier/expac?
+    },
   }
   
   -- DB defaults
@@ -444,75 +450,130 @@ function iwtb:OnEnable()
       -- fill in raids with arg1 as expac id
       getInstances(arg1)
       -- set text to selection
-      printTable(self)
+      --printTable(self)
       UIDropDownMenu_SetText(expacButton, self:GetText())
       --UIDropDownMenu_SetSelectedID(expacButton, self:GetID())
     
     elseif arg2 == "instancebutton" then
     UIDropDownMenu_SetText(instanceButton, self:GetText())
+    
+      -- Generate boss frames within raiderBossListFrame
+      local function genBossFrames(bossList)
+        -- Empty boss list to create the bosses frames
+        bossFrame = {}
+        
+        -- assume raider tab for now
+        
+        --print("--- raiderDB.char.bosses ---")
+        --printTable(raiderDB.char.bosses)
+        --print("--- end ---")
+        
+        -- Create a frame for each boss with a desire dropdown.
+          local i = 1
+          for id, bossid in pairs(bossList.order) do
+            local y = -50 * i
+            local idofboss = tostring(bossid)
+            --print("y: " .. y)
+            --print("bossid: " .. idofboss .. " bossname: " .. bossname)
+            bossFrame[idofboss] = CreateFrame("Frame", "iwtbboss" .. idofboss, raiderBossListFrame)
+            bossFrame[idofboss]:SetWidth(300)
+            bossFrame[idofboss]:SetHeight(50)
+            bossFrame[idofboss]:SetPoint("TOP", -50, y)
+            
+            local texture = bossFrame[idofboss]:CreateTexture("iwtbboss" .. idofboss)
+            texture:SetAllPoints(bossFrame[idofboss])
+            texture:SetColorTexture(0.2,0.2,0.2,0.7)
+            local fontstring = bossFrame[idofboss]:CreateFontString("iwtbbosstext" .. idofboss)
+            fontstring:SetAllPoints(bossFrame[idofboss])
+            --fontstring:SetPoint("TOP", 0, y)
+            if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
+              print("Font not valid")
+            end
+            fontstring:SetJustifyH("LEFT")
+            fontstring:SetJustifyV("CENTER")
+            fontstring:SetText(bossList.bosses[bossid])
+            
+            --add dropdown menu for need/minor/os etc.
+            local bossWantdropdown = CreateFrame("Frame", "bossWantdropdown" .. bossid, bossFrame[idofboss], "UIDropDownMenuTemplate")
+            bossWantdropdown:SetPoint("RIGHT", 0, 0)
+            --expacButton:SetScript("OnClick", MyDropDownMenuButton_OnClick)
+            UIDropDownMenu_SetWidth(bossWantdropdown, 100) -- Use in place of dropDown:SetWidth
+            -- Bind an initializer function to the dropdown; see previous sections for initializer function examples.
+            UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
+            
+            -- Set text to current selection if there is one otherwise default msg
+            -- Need to change bossid to a string as that's how the table is created. Maybe we should create as a number? Depends on later use and which one is less hassle.
+            
+
+            if raiderDB.char.bosses[idofboss] ~= nil then
+              UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.bosses[idofboss]])
+            else
+              UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
+            end
+            
+            i = i +1
+          end
+        end
+      
       --UIDropDownMenu_SetSelectedID(instanceButton, self:GetID())
-      --populate the raider boss list frame OR fill in the raid leader dropdown boss list
+      -- Populate the raider boss list frame OR fill in the raid leader dropdown boss list
 
       -- get the boss list
       local bossList = getBosses(arg1)
-      --print("bosslist")
       --printTable(bossList.bosses)
       
-      -- Clear bossFrame
-      --[[if bossFrame ~= nil then
-        count = #bossFrame
-        for i=0, count do bossFrame[i]=nil end
-      end]]
-      local bossFrame = {}
+      -- Because the frame may already be created we need to check
       
-      -- assume raider tab for now
-      
-      print("--- raiderDB.char.bosses ---")
-      printTable(raiderDB.char.bosses)
-      print("--- end ---")
-      local i = 1
-      for bossid, bossname in pairs(bossList.bosses) do
-        local y = -50 * i
-        --print("y: " .. y)
-        --print("bossid: " .. bossid .. " bossname: " .. bossname)
-        bossFrame[i] = CreateFrame("Frame", "iwtbboss" .. bossid, raiderBossListFrame)
-        bossFrame[i]:SetWidth(300)
-        bossFrame[i]:SetHeight(50)
-        bossFrame[i]:SetPoint("TOP", -50, y)
+      if raiderBossListFrame:GetChildren() == nil then
+        genBossFrames(bossList)
+      else  
+        -- We have frames in the boss list so check if they are the frames we want
+        --print("Children#: " .. raiderBossListFrame:GetNumChildren())
+        --print(string.match(raiderBossListFrame:GetChildren():GetName(), "%d+"))
+        --printTable(raiderBossListFrame:GetChildren())
+        local childFrames = {raiderBossListFrame:GetChildren()}
+        local haveList = false
         
-        local texture = bossFrame[i]:CreateTexture("iwtbboss" .. bossid)
-        texture:SetAllPoints(bossFrame[i])
-        texture:SetColorTexture(0.2,0.2,0.2,0.7)
-        local fontstring = bossFrame[i]:CreateFontString("iwtbbosstext" .. bossid)
-        fontstring:SetAllPoints(bossFrame[i])
-        --fontstring:SetPoint("TOP", 0, y)
-        if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
-          print("Font not valid")
+        -- Search childFrames for the first boss id -- if found we should have the entire list
+        -- Hide all boss frames as we are here
+        for _, frame in ipairs(childFrames) do
+          frame:Hide()
+          if frame:GetName() == "iwtbboss" .. bossList.order[1] then haveList = true end
         end
-        fontstring:SetJustifyH("LEFT")
-        fontstring:SetJustifyV("CENTER")
-        fontstring:SetText(bossname)
         
-        --add dropdown menu for need/minor/os etc.
-        local bossWantdropdown = CreateFrame("Frame", "bossWantdropdown" .. bossid, bossFrame[i], "UIDropDownMenuTemplate")
-        bossWantdropdown:SetPoint("RIGHT", 0, 0)
-        --expacButton:SetScript("OnClick", MyDropDownMenuButton_OnClick)
-        UIDropDownMenu_SetWidth(bossWantdropdown, 100) -- Use in place of dropDown:SetWidth
-        -- Bind an initializer function to the dropdown; see previous sections for initializer function examples.
-        UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
-        
-        -- Set text to current selection if there is one otherwise default msg
-        -- Need to change bossid to a string as that's how the table is created. Maybe we should create as a number? Depends on later use and which one is less hassle.
-        local idofboss = tostring(bossid)
-
-        if raiderDB.char.bosses[idofboss] ~= nil then
-          UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.bosses[idofboss]])
+        if haveList then
+          
+          --print("We already have this list")
+          -- Hide all boss frames
+          for _, frame in ipairs(childFrames) do
+            frame:Hide()
+          end
+          
+          -- Interate over bosses and show needed frames
+          for bossid, bossname in pairs(bossList.bosses) do
+            local sFrameName = "iwtbboss" .. tostring(bossid)
+            
+            for _, frame in ipairs(childFrames) do
+              -- See if we need to hide or show this frame
+              if frame:GetName() == sFrameName then
+                frame:Show()
+              end
+            end
+          end
         else
-          UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
+
+          -- Hide current
+          for _, frame in ipairs(childFrames) do
+            --print(frame:GetName())
+            frame:Hide()
+          end
+          
+          -- Create a new list
+          genBossFrames(bossList)
+          
         end
-        
-        i = i +1
       end
+      
     
     elseif arg2 == "bossesbutton" then -- only in RL tab
     
@@ -544,13 +605,12 @@ function iwtb:OnEnable()
     elseif frame:GetName() == "instancebutton" then
       -- Get raids for expac
       if tierRaidInstances ~= nil then
-        -- TODO: use tierRaidInstances.order to insert in order and not by instanceid
         info.func = raidsDropdownMenuOnClick
         --info.checked = false
-        for key, value in pairs(tierRaidInstances.raids) do
+        for key, value in pairs(tierRaidInstances.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
           --print(key .. ": " .. value)
           
-          info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
+          info.text, info.notCheckable, info.arg1, info.arg2 = tierRaidInstances.raids[value], true, value, frame:GetName()
           
           UIDropDownMenu_AddButton(info)
         end
@@ -587,8 +647,14 @@ function iwtb:OnEnable()
     --print(self:GetParent())
     print("arg1: " .. tostring(arg1) .. " arg2: " .. tostring(arg2) .. " checked: " .. tostring(checked))
     
+    -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
     raiderDB.char.bosses[arg2] = arg1
-    --UIDropDownMenu_SetSelectedID(self:GetParent(), self:GetID())
+    -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
+    --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
+    --print("SerStr: " .. raiderBossesStr)
+    
+    -- Set dropdown text to new selection
+    UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
     --print(raiderDB.char.bosses[arg2])
     
   end
@@ -612,7 +678,7 @@ function iwtb:OnEnable()
       info.text, info.arg1, info.arg2 = name, desireid, idofboss
       --print(raiderDB.char.bosses[idofboss])
       if raiderDB.char.bosses[idofboss] ~=nil and raiderDB.char.bosses[idofboss] == desireid then
-        print("desired: " .. desireid .. " bossid: " .. idofboss)
+        --print("desired: " .. desireid .. " bossid: " .. idofboss)
         info.checked = true
         --UIDropDownMenu_SetText(frame, name)
       else
@@ -741,6 +807,23 @@ function iwtb:OnEnable()
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Raid Leader")
+  
+  -- Raider send button
+  local raiderSendButton = CreateFrame("Button", "iwtbraidersendbutton", raiderTab, "UIPanelButtonTemplate")
+  raiderSendButton:SetWidth(GUItabButtonSizeX)
+  raiderSendButton:SetHeight(GUItabButtonSizeY)
+  raiderSendButton:SetText(L["Send"])
+  raiderSendButton:SetPoint("CENTER", raiderSendButton:GetParent(), "BOTTOMRIGHT", -100, 30)
+  texture = raiderSendButton:CreateTexture("raidersendbuttex")
+  texture:SetAllPoints(raiderSendButton)
+  texture:SetColorTexture(0, 0, 0, 1)
+  raiderSendButton:Enable()
+  raiderSendButton:RegisterForClicks("LeftButtonUp")
+  raiderSendButton:SetScript("OnClick", function(s)
+    -- Send current desire list (to raid?)
+    local mydata = iwtb.encodeData("hash", raiderDB.char.bosses)
+    print(mydata)
+  end)
   
   -- Dropdown buttons
   expacButton = CreateFrame("Frame", "expacbutton", raiderTab, "UIDropDownMenuTemplate")

@@ -12,6 +12,7 @@ L["Bosses"] = true
 L["Select expansion"] = true
 L["Select raid"] = true
 L["Select desirability"] = true
+L["Send"] = true
 L["BiS"] = true
 L["Need"] = true
 L["Minor"] = true
