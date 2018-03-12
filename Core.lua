@@ -7,24 +7,35 @@ local L = LibStub("AceLocale-3.0"):GetLocale("iWTB")
 local db
 local raiderDB
 local raidLeaderDB
-local commSpec = 1 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
 local rankInfo = {} -- Guild rank info
-local expacInfo = nil
-local tierRaidInstances = nil
+local expacInfo = nil -- Expacs for dropdown
+local tierRaidInstances = nil -- Raid instances for raider tab dropdown
+local tierRLRaidInstances = nil 
+local instanceBosses = nil -- Bosses for RL tab dropdown
 local frame
 local windowframe -- main frame
 local raiderFrame -- raider tab frame
 local rlMainFrame -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
+local rlRaiderListFrame -- main frame listing raiders spots
+local grpMemFrame = {} -- table containing each frame per group
+local grpMemSlotFrame = {} -- table containing each frame per slot for each group
+local rlRaiderNotListFrame -- main frame listing raiders NOT in the raid but in the rl db
 local bossFrame -- table of frames containing each boss frame
 local raiderBossesStr = "" -- raider boss desire seralised
 local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
 
+local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
+local rlSelectedTier = {} -- Must be a better way but cba for now.
+
 --Dropdown menu frames
 local expacButton = nil
+local expacRLButton = nil
 local instanceButton = nil
+local instanceRLButton = nil
+local bossesRLButton = nil
 
 -- GUI dimensions
 local GUIwindowSizeX = 700
@@ -35,8 +46,97 @@ local GUItitleSizeX = 200
 local GUItitleSizeY = 30
 local GUItabButtonSizeX = 100
 local GUItabButtonSizeY = 30
+local GUIgrpSizeX = 580
+local GUIgrpSizeY = 50
+local GUIgrpSlotSizeX = 110
+local GUIgrpSlotSizeY = 45
   
 -- API Calls and functions
+
+--author: Alundaio (aka Revolucas)
+function print_table(node)
+    -- to make output beautiful
+    local function tab(amt)
+        local str = ""
+        for i=1,amt do
+            str = str .. "\t"
+        end
+        return str
+    end
+ 
+    local cache, stack, output = {},{},{}
+    local depth = 1
+    local output_str = "{\n"
+ 
+    while true do
+        local size = 0
+        for k,v in pairs(node) do
+            size = size + 1
+        end
+ 
+        local cur_index = 1
+        for k,v in pairs(node) do
+            if (cache[node] == nil) or (cur_index >= cache[node]) then
+               
+                if (string.find(output_str,"}",output_str:len())) then
+                    output_str = output_str .. ",\n"
+                elseif not (string.find(output_str,"\n",output_str:len())) then
+                    output_str = output_str .. "\n"
+                end
+ 
+                -- This is necessary for working with HUGE tables otherwise we run out of memory using concat on huge strings
+                table.insert(output,output_str)
+                output_str = ""
+               
+                local key
+                if (type(k) == "number" or type(k) == "boolean") then
+                    key = "["..tostring(k).."]"
+                else
+                    key = "['"..tostring(k).."']"
+                end
+ 
+                if (type(v) == "number" or type(v) == "boolean") then
+                    output_str = output_str .. tab(depth) .. key .. " = "..tostring(v)
+                elseif (type(v) == "table") then
+                    output_str = output_str .. tab(depth) .. key .. " = {\n"
+                    table.insert(stack,node)
+                    table.insert(stack,v)
+                    cache[node] = cur_index+1
+                    break
+                else
+                    output_str = output_str .. tab(depth) .. key .. " = '"..tostring(v).."'"
+                end
+ 
+                if (cur_index == size) then
+                    output_str = output_str .. "\n" .. tab(depth-1) .. "}"
+                else
+                    output_str = output_str .. ","
+                end
+            else
+                -- close the table
+                if (cur_index == size) then
+                    output_str = output_str .. "\n" .. tab(depth-1) .. "}"
+                end
+            end
+ 
+            cur_index = cur_index + 1
+        end
+ 
+        if (#stack > 0) then
+            node = stack[#stack]
+            stack[#stack] = nil
+            depth = cache[node] == nil and depth + 1 or depth - 1
+        else
+            break
+        end
+    end
+ 
+    -- This is necessary for working with HUGE tables otherwise we run out of memory using concat on huge strings
+    table.insert(output,output_str)
+    output_str = table.concat(output)
+   
+    print(output_str)
+end
 
 local function printTable(table)
   --print(type(table))
@@ -76,11 +176,19 @@ local function getExpansions()
 end
 
 -- Return the raids per expansion
-local function getInstances(expacID)
+local function getInstances(expacID, isRL)
   EJ_SelectTier(expacID)
-  tierRaidInstances = {}
-  tierRaidInstances.raids = {}
-  tierRaidInstances.order = {}
+  
+  if isRL then
+    tierRLRaidInstances = {}
+    tierRLRaidInstances.raids = {}
+    tierRLRaidInstances.order = {}
+  else
+    tierRaidInstances = {}
+    tierRaidInstances.raids = {}
+    tierRaidInstances.order = {}
+  end
+  
   local i = 1
   local raidCounter = 1
   local finished = false
@@ -94,8 +202,13 @@ local function getInstances(expacID)
       local raidTitle = select(2,EJ_GetInstanceByIndex(i,true))
       
       if isRaid then
-        table.insert(tierRaidInstances.raids, instanceInfoID, raidTitle)
-        table.insert(tierRaidInstances.order, raidCounter , instanceInfoID)
+        if isRL then
+            table.insert(tierRLRaidInstances.raids, instanceInfoID, raidTitle)
+            table.insert(tierRLRaidInstances.order, raidCounter , instanceInfoID)
+        else
+          table.insert(tierRaidInstances.raids, instanceInfoID, raidTitle)
+          table.insert(tierRaidInstances.order, raidCounter , instanceInfoID)
+        end
         raidCounter = raidCounter + 1
       end
       
@@ -110,7 +223,7 @@ local function getInstances(expacID)
 end
 
 -- Return the bosses per raid.
-local function getBosses(raidID)
+local function getBosses(raidID, isRL)
   local raidBosses = {}
   raidBosses.bosses = {}
   raidBosses.order = {}
@@ -133,23 +246,106 @@ local function getBosses(raidID)
     if i == 30 then finished = true end
   until finished
   
-  return raidBosses
+  if isRL then
+    instanceBosses = raidBosses
+  else
+    return raidBosses
+  end
 end
 
-  
-function iwtb:OnInitialize()
+local function dbSchemaCheck(level, expac)
+  print_table(raiderDB.char)
+  if level == "expacs" then
+    if expacInfo == nil then getExpansions() end
+    for key, value in pairs(expacInfo) do
+      if raiderDB.char.expac[key] == nil then raiderDB.char.expac[key] = {} end
+    end
+    print_table(raiderDB.char)
+  elseif level == "inst" and type(expac) == "number" then
+    for key, value in pairs(tierRaidInstances.raids) do
+      if raiderDB.char.expac[expac].tier == nil then raiderDB.char.expac[expac].tier = {} end
+      if raiderDB.char.expac[expac].tier[key] == nil then
+        raiderDB.char.expac[expac].tier[key] = {}
+        raiderDB.char.expac[expac].tier[key].bosses = {}
+      end
+    end
+    print_table(raiderDB.char)
+  end
+end
+----------------------------------------------------------------
+----------------------------------------------------------------
+----------------------------------------------------------------
+-- Lovingly "inspired" by RSUM
+local function FrameContainsPoint(frame, x, y)
+	local left, bottom, width, height = frame:GetRect()
+  print(frame:GetName() .. " - " .. frame:GetRect())
+	if x >= left then
+		if y >= bottom then
+			if x <= left + width then
+				if y <= bottom + height then
+					return true;
+				end
+			end
+		end
+	end
+	return false;
+end
 
+-- search for mouseover frame which is actually overlapped by the dragged frame - does not work correctly for slots in same grp if > dragged. Anchor point problem? Position on drag changes GetRect?
+local function MemberFrameContainsPoint(x, y)
+	if FrameContainsPoint(rlRaiderListFrame, x, y) then
+		for i=1,8 do
+			if FrameContainsPoint(grpMemFrame[i], x, y) then
+				for member=1,5 do
+					if FrameContainsPoint(grpMemSlotFrame[i][member], x, y) then
+            print("grp: " .. i .. " slot: " .. member)
+            print("x: " .. x .. " y: " ..y)
+						return i, member;
+					end
+				end
+				return i, nil;
+			end
+		end
+	end
+	return nil, nil;
+end
+
+local function redrawGroup(grp)
+  for n=1, 5 do
+    local slotx = (GUIgrpSlotSizeX +5) * (n -1)
+    --print(grpMemSlotFrame[tgrp][n]:GetName())
+    grpMemSlotFrame[grp][n]:ClearAllPoints()
+    grpMemSlotFrame[grp][n]:SetParent(grpMemFrame[grp])
+    grpMemSlotFrame[grp][n]:SetPoint("TOPLEFT", slotx, -3)
+    --grpMemSlotFrame[tgrp][n]:
+  end
+  
+end
+---------------------------------
+function iwtb:OnInitialize()
+---------------------------------
   local raiderDefaults = {  -- bosses[id].desire
     char = {
-      bosses = {},
-      bossListHash = "", -- this is the hash of all bosses to be sent for comparision with the RL data
+      expac = {
+        --[[tier = {
+          bosses = {},
+        },]]
+      },
+      bossListHash = "", -- this is the hash of all bosses to be sent for comparison with the RL data
     },
   }
   
   
   local raiderLeaderDefaults = { -- is there any? boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
     char = {
-      raiders = {}, -- Do we want to organise by tier/expac?
+      raiders = {
+        --[[expac = {
+          tier = {
+            bosses = {},
+          },
+        },
+        bossListHash = "",]]
+      },
     },
   }
   
@@ -162,13 +358,16 @@ function iwtb:OnInitialize()
     },
   }
   
-  self.db = LibStub("AceDB-3.0"):New("iWTBDB", defaults)
+  iwtb.db = LibStub("AceDB-3.0"):New("iWTBDB", defaults)
   db = self.db
-  raiderDB = LibStub("AceDB-3.0"):New("iWTBRaiderDB", raiderDefaults)
-  raidLeaderDB = LibStub("AceDB-3.0"):New("iWTBRaidLeaderDB", raidLeaderDefaults)
+  iwtb.raiderDB = LibStub("AceDB-3.0"):New("iWTBRaiderDB", raiderDefaults)
+  raiderDB = self.raiderDB
+  iwtb.raidLeaderDB = LibStub("AceDB-3.0"):New("iWTBRaidLeaderDB", raidLeaderDefaults)
+  raidLeaderDB = self.raidLeaderDB
   
   rankInfo = getGuildRanks()
-  expacsInfo = getExpansions()
+  expacInfo = getExpansions()
+  
   
   --raiderDB:ResetDB()
   
@@ -256,184 +455,16 @@ function iwtb:OnInitialize()
   
   --self:RegisterChatCommand("iWTBrank", "getGuildRanks")
 
-
+  
 
 end
 
 function iwtb:OnEnable()
   -- Called when the addon is enabled
+  
+ 
   -- GUI stuff
 
-  --[[createMainFrame = function()
-    frame = AceGUI:Create("Frame")
-    frame:SetTitle("iWTB - I Want That Boss!")
-    frame:SetStatusText("Container Frame")
-    frame:SetCallback("OnClose", function(widget) AceGUI:Release(widget) end)
-    -- Fill Layout - the TabGroup widget will fill the whole frame
-    frame:SetLayout("Fill")
-    
-    --Raider tab
-    local function DrawRaiderTab(container)
-      raiderFrame = AceGUI:Create("Frame")
-      raiderFrame:SetStatusText("Raider frame")
-      raiderFrame:SetLayout("List")
-      raiderFrame:SetRelativeWidth(1)
-      raiderFrame:SetFullHeight(true)
-      raiderFrame:SetCallback("OnDragStart", function(s) print("drag start") end);
-      
-      
-      local desc = AceGUI:Create("Label")
-      desc:SetText(L["Raider"])
-      desc:SetFullWidth(true)
-      container:AddChild(desc)
-      
-      local bosses = AceGUI:Create("Dropdown")
-      bosses:SetText(L["Bosses"])
-      bosses:SetWidth(200)
-      bosses:SetList({L["Select raid"]})
-      bosses:SetCallback("OnValueChanged", function(boss)
-
-      end)
-      
-      local raid = AceGUI:Create("Dropdown")
-      raid:SetText(L["Raid"])
-      raid:SetWidth(200)
-      raid:SetList({L["Select expansion"]})
-      raid:SetCallback("OnValueChanged", function(instance)
-        local bossesInfo = getBosses(instance.value)
-
-        bosses:SetList(bossesInfo.bosses, bossesInfo.order)
-      
-      end)
-      
-      local expansion = AceGUI:Create("Dropdown")
-      expansion:SetText(L["Expansion"])
-      expansion:SetWidth(200)
-      expansion:SetList(expacsInfo)
-      expansion:SetCallback("OnValueChanged", function(expac)
-        local raidInfo = getInstances(expac.value)
-        raid:SetList(raidInfo.raids, raidInfo.order)
-      end)
-      
-      container:AddChild(expansion)
-      container:AddChild(raid)
-      container:AddChild(bosses)
-      container:AddChild(raiderFrame)
-      
-      
-      local dumpVar = AceGUI:Create("Button")
-      dumpVar:SetText("Dump var")
-      dumpVar:SetWidth(200)
-      dumpVar:SetCallback("OnClick", function(but)
-        local test = getInstances(7)
-        for key, value in pairs(iwtb) do
-            print(key, value)
-        end
-
-        --self:Print(test[1])
-        --self:Print(type(EJ_GetInstanceByIndex(1,true)))
-        --self:Print(fromCSV(type(EJ_GetInstanceByIndex(1,true))))
-        --self:Print(fromCSV(EJ_GetInstanceInfo(822))[1])
-        --print(select("#", EJ_GetInstanceInfo(822)))
-        --print(select(1, EJ_GetInstanceInfo(822)))
-        --print(select(2, EJ_GetInstanceInfo(822)))
-        --print(select(3, EJ_GetInstanceInfo(822)))
-        --print(select(9, EJ_GetInstanceInfo(822)))
-      end)
-      container:AddChild(dumpVar)
-    end
-
-    -- Raid Leader tab
-    local function DrawRLTab(container)
-      local desc = AceGUI:Create("Label")
-      desc:SetText(L["Raid Leader"])
-      desc:SetFullWidth(true)
-      container:AddChild(desc)
-      
-      local bosses = AceGUI:Create("Dropdown")
-      bosses:SetText(L["Bosses"])
-      bosses:SetWidth(200)
-      bosses:SetList({L["Select raid"]})
-      bosses:SetCallback("OnValueChanged", function(boss)
-
-      end)
-      
-      local raid = AceGUI:Create("Dropdown")
-      raid:SetText(L["Raid"])
-      raid:SetWidth(200)
-      raid:SetList({L["Select expansion"]})
-      raid:SetCallback("OnValueChanged", function(instance)
-        local bossesInfo = getBosses(instance.value)
-
-        bosses:SetList(bossesInfo.bosses, bossesInfo.order)
-      
-      end)
-      
-      local expansion = AceGUI:Create("Dropdown")
-      expansion:SetText(L["Expansion"])
-      expansion:SetWidth(200)
-      expansion:SetList(expacsInfo)
-      expansion:SetCallback("OnValueChanged", function(expac)
-        local raidInfo = getInstances(expac.value)
-        raid:SetList(raidInfo.raids, raidInfo.order)
-      end)
-      
-      container:AddChild(expansion)
-      container:AddChild(raid)
-      container:AddChild(bosses)
-      
-      
-      
-      local dumpVar = AceGUI:Create("Button")
-      dumpVar:SetText("Dump var")
-      dumpVar:SetWidth(200)
-      dumpVar:SetCallback("OnClick", function(but)
-        local test = getInstances(7)
-        for key, value in pairs(iwtb) do
-            print(key, value)
-        end
-
-        --self:Print(test[1])
-        --self:Print(type(EJ_GetInstanceByIndex(1,true)))
-        --self:Print(fromCSV(type(EJ_GetInstanceByIndex(1,true))))
-        --self:Print(fromCSV(EJ_GetInstanceInfo(822))[1])
-        --print(select("#", EJ_GetInstanceInfo(822)))
-        --print(select(1, EJ_GetInstanceInfo(822)))
-        --print(select(2, EJ_GetInstanceInfo(822)))
-        --print(select(3, EJ_GetInstanceInfo(822)))
-        --print(select(9, EJ_GetInstanceInfo(822)))
-      end)
-      container:AddChild(dumpVar)
-    end
-
-    -- Callback function for OnGroupSelected
-    local function SelectGroup(container, event, group)
-       container:ReleaseChildren()
-       if group == "raider" then
-          DrawRaiderTab(container)
-       elseif group == "raidleader" then
-          DrawRLTab(container)
-       end
-    end
-
-
-    -- Create the TabGroup
-    local tab =  AceGUI:Create("TabGroup")
-    tab:SetLayout("Flow")
-    -- Setup which tabs to show
-    tab:SetTabs({{text=L["Raider"], value="raider"}, {text=L["Raid Leader"], value="raidleader"}})
-    -- Register callback
-    tab:SetCallback("OnGroupSelected", SelectGroup)
-    -- Set initial Tab (this will fire the OnGroupSelected callback)
-    tab:SelectTab("raider")
-
-    -- add to the frame container
-    frame:AddChild(tab)
-  end
-  
-  createMainFrame()]]
-  
-  --AceGUI appears to be very basic so we can't use it to make draggable raid frames.
   local fontstring
   local button
   local texture
@@ -449,20 +480,24 @@ function iwtb:OnEnable()
     if arg2 == "expacbutton" then
       -- fill in raids with arg1 as expac id
       getInstances(arg1)
-      -- set text to selection
-      --printTable(self)
+      raiderSelectedTier.expacid = arg1
       UIDropDownMenu_SetText(expacButton, self:GetText())
-      --UIDropDownMenu_SetSelectedID(expacButton, self:GetID())
-    
+      dbSchemaCheck("expacs")
+      
+    elseif arg2 == "expacrlbutton" then
+      -- fill in raids with arg1 as expac id
+      getInstances(arg1, true)
+      rlSelectedTier.expacid = arg1
+      UIDropDownMenu_SetText(expacRLButton, self:GetText())
+      
     elseif arg2 == "instancebutton" then
     UIDropDownMenu_SetText(instanceButton, self:GetText())
-    
+    raiderSelectedTier.instid = arg1
+    dbSchemaCheck("inst", raiderSelectedTier.expacid)
       -- Generate boss frames within raiderBossListFrame
       local function genBossFrames(bossList)
         -- Empty boss list to create the bosses frames
         bossFrame = {}
-        
-        -- assume raider tab for now
         
         --print("--- raiderDB.char.bosses ---")
         --printTable(raiderDB.char.bosses)
@@ -505,8 +540,10 @@ function iwtb:OnEnable()
             -- Need to change bossid to a string as that's how the table is created. Maybe we should create as a number? Depends on later use and which one is less hassle.
             
 
-            if raiderDB.char.bosses[idofboss] ~= nil then
-              UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.bosses[idofboss]])
+            --if raiderDB.char.bosses[idofboss] ~= nil then
+            if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
+            and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~= nil then
+              UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss]])
             else
               UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
             end
@@ -516,6 +553,7 @@ function iwtb:OnEnable()
         end
       
       --UIDropDownMenu_SetSelectedID(instanceButton, self:GetID())
+      
       -- Populate the raider boss list frame OR fill in the raid leader dropdown boss list
 
       -- get the boss list
@@ -574,9 +612,19 @@ function iwtb:OnEnable()
         end
       end
       
+    elseif arg2 == "instancerlbutton" then
+      UIDropDownMenu_SetText(instanceRLButton, self:GetText())
+      rlSelectedTier.instid = arg1
+      -- get the boss list
+      getBosses(arg1, true)
     
-    elseif arg2 == "bossesbutton" then -- only in RL tab
-    
+    elseif arg2 == "bossesrlbutton" then -- only in RL tab
+      UIDropDownMenu_SetText(bossesRLButton, self:GetText())
+      print(self:GetID() .. " : " .. self:GetName())
+      print("expacid: " .. rlSelectedTier.expacid .. " tierid: " .. rlSelectedTier.instid)
+      print("bossid: ", instanceBosses.order[self:GetID()])
+      
+      
     end
     --[[if arg1 == 1 then
     print("You can continue to believe whatever you want to believe.")
@@ -602,6 +650,21 @@ function iwtb:OnEnable()
         --if key == 7 then info.checked = true end
         UIDropDownMenu_AddButton(info)
       end
+    
+    elseif frame:GetName() == "expacrlbutton" then
+      -- Get expansions
+      --print("return expacs")
+      if expacInfo == nil then getExpansions() end
+      info.func = raidsDropdownMenuOnClick
+      --info.checked = false
+      for key, value in pairs(expacInfo) do
+        --print(key .. ": " .. value)
+        
+        info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
+        --if key == 7 then info.checked = true end
+        UIDropDownMenu_AddButton(info)
+      end
+      
     elseif frame:GetName() == "instancebutton" then
       -- Get raids for expac
       if tierRaidInstances ~= nil then
@@ -616,10 +679,26 @@ function iwtb:OnEnable()
         end
       end
     
-    elseif frame:GetName() == "bossesbutton" then
-      -- Get bosses for instance - RL only
-      --getBosses(id)
+    elseif frame:GetName() == "instancerlbutton" then
+      -- Get raids for expac
+      if tierRLRaidInstances ~= nil then
+        info.func = raidsDropdownMenuOnClick
+        for key, value in pairs(tierRLRaidInstances.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
+          info.text, info.notCheckable, info.arg1, info.arg2 = tierRLRaidInstances.raids[value], true, value, frame:GetName()
+          
+          UIDropDownMenu_AddButton(info)
+        end
+      end
       
+    elseif frame:GetName() == "bossesrlbutton" then
+      -- Get bosses for instance - RL only
+      if instanceBosses ~= nil then
+        info.func = raidsDropdownMenuOnClick
+        for key, value in pairs(instanceBosses.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
+          info.text, info.notCheckable, info.arg1, info.arg2 = instanceBosses.bosses[value], true, value, frame:GetName()
+          UIDropDownMenu_AddButton(info)
+        end
+      end
     end
     
     --[[print("--------------")
@@ -646,17 +725,20 @@ function iwtb:OnEnable()
     end]]
     --print(self:GetParent())
     print("arg1: " .. tostring(arg1) .. " arg2: " .. tostring(arg2) .. " checked: " .. tostring(checked))
-    
+    print("expacID: " .. raiderSelectedTier.expacid .. " tierID: " .. raiderSelectedTier.instid)
     -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
-    raiderDB.char.bosses[arg2] = arg1
+    raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
     -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
     --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
     --print("SerStr: " .. raiderBossesStr)
     
     -- Set dropdown text to new selection
     UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
+    -- Update hash
+    print("Old hash: " .. raiderDB.char.bossListHash)
+    raiderDB.char.bossListHash = iwtb.encodeData("hash", raiderDB.char.expac) -- Do we want to hash here? Better to do it before sending or on request?
     --print(raiderDB.char.bosses[arg2])
-    
+    print("New hash: " .. raiderDB.char.bossListHash)
   end
     
   -- Fill menu with desirability list
@@ -677,7 +759,9 @@ function iwtb:OnEnable()
       
       info.text, info.arg1, info.arg2 = name, desireid, idofboss
       --print(raiderDB.char.bosses[idofboss])
-      if raiderDB.char.bosses[idofboss] ~=nil and raiderDB.char.bosses[idofboss] == desireid then
+      if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
+      and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~=nil
+      and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] == desireid then
         --print("desired: " .. desireid .. " bossid: " .. idofboss)
         info.checked = true
         --UIDropDownMenu_SetText(frame, name)
@@ -791,6 +875,40 @@ function iwtb:OnEnable()
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Boss list")
   
+  -- Raider send button
+  local raiderSendButton = CreateFrame("Button", "iwtbraidersendbutton", raiderTab, "UIPanelButtonTemplate")
+  raiderSendButton:SetWidth(GUItabButtonSizeX)
+  raiderSendButton:SetHeight(GUItabButtonSizeY)
+  raiderSendButton:SetText(L["Send"])
+  raiderSendButton:SetPoint("CENTER", raiderSendButton:GetParent(), "BOTTOMRIGHT", -100, 30)
+  texture = raiderSendButton:CreateTexture("raidersendbuttex")
+  texture:SetAllPoints(raiderSendButton)
+  texture:SetColorTexture(0, 0, 0, 1)
+  raiderSendButton:Enable()
+  raiderSendButton:RegisterForClicks("LeftButtonUp")
+  raiderSendButton:SetScript("OnClick", function(s)
+    -- Send current desire list (to raid?)
+    --local mydata = iwtb.encodeData("hash", raiderDB.char.bosses)
+    print("Hash: " .. raiderDB.char.bossListHash)
+    --iwtb.sendData("rhash", raiderDB.char.bossListHash, "raid")
+    iwtb.sendData("rhash", "0123456789", "raid") -- junk hash for testing
+  end)
+  
+  -- Raider reset DB button
+  local raiderResetDBButton = CreateFrame("Button", "iwtbraiderresetdbbutton", raiderTab, "UIPanelButtonTemplate")
+  raiderResetDBButton:SetWidth(GUItabButtonSizeX)
+  raiderResetDBButton:SetHeight(GUItabButtonSizeY)
+  raiderResetDBButton:SetText(L["Reset DB"])
+  raiderResetDBButton:SetPoint("CENTER", raiderResetDBButton:GetParent(), "BOTTOMRIGHT", -250, 30)
+  texture = raiderResetDBButton:CreateTexture("raiderresetdbbuttex")
+  texture:SetAllPoints(raiderResetDBButton)
+  texture:SetColorTexture(0, 0, 0, 1)
+  raiderResetDBButton:Enable()
+  raiderResetDBButton:RegisterForClicks("LeftButtonUp")
+  raiderResetDBButton:SetScript("OnClick", function(s)
+    raiderDB:ResetDB()
+  end)
+  
   -- Raider leader tab
   local rlTab = CreateFrame("Frame", "iwtbraidleadertab", windowframe)
   rlTab:SetWidth(GUItabWindowSizeX)
@@ -808,24 +926,193 @@ function iwtb:OnEnable()
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Raid Leader")
   
-  -- Raider send button
-  local raiderSendButton = CreateFrame("Button", "iwtbraidersendbutton", raiderTab, "UIPanelButtonTemplate")
-  raiderSendButton:SetWidth(GUItabButtonSizeX)
-  raiderSendButton:SetHeight(GUItabButtonSizeY)
-  raiderSendButton:SetText(L["Send"])
-  raiderSendButton:SetPoint("CENTER", raiderSendButton:GetParent(), "BOTTOMRIGHT", -100, 30)
-  texture = raiderSendButton:CreateTexture("raidersendbuttex")
-  texture:SetAllPoints(raiderSendButton)
-  texture:SetColorTexture(0, 0, 0, 1)
-  raiderSendButton:Enable()
-  raiderSendButton:RegisterForClicks("LeftButtonUp")
-  raiderSendButton:SetScript("OnClick", function(s)
-    -- Send current desire list (to raid?)
-    local mydata = iwtb.encodeData("hash", raiderDB.char.bosses)
-    print(mydata)
-  end)
+  -- rlRaiderListFrame
+  rlRaiderListFrame = CreateFrame("Frame", "iwtbrlraiderlistframe", rlTab)
+  rlRaiderListFrame:SetWidth(GUItabWindowSizeX -20)
+  rlRaiderListFrame:SetHeight(GUItabWindowSizeY -20)
+  rlRaiderListFrame:SetPoint("CENTER", 0, 0)
+  texture = rlRaiderListFrame:CreateTexture("iwtbrlraiderlistframetex")
+  texture:SetAllPoints(rlRaiderListFrame)
+  texture:SetColorTexture(0.1,0.1,0.1,1)
+  fontstring = rlRaiderListFrame:CreateFontString("iwtbrlraiderlistframetesting")
+  fontstring:SetAllPoints(rlRaiderListFrame)
+  if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
+    print("Font not valid")
+  end
+  fontstring:SetJustifyH("CENTER")
+  fontstring:SetJustifyV("CENTER")
+  fontstring:SetText("Raider list")
   
-  -- Dropdown buttons
+  -- Create frame for each raid spot
+  for i=1, 8 do -- 8 groups of 5 slots
+    local x = 20
+    local y = (GUIgrpSizeY + 5) * i
+    
+    --local y = 55 *i
+    grpMemFrame[i] = CreateFrame("Frame", "iwtbgrp" .. i, rlRaiderListFrame)
+    grpMemFrame[i]:SetWidth(GUIgrpSizeX)
+    grpMemFrame[i]:SetHeight(GUIgrpSizeY)
+    grpMemFrame[i]:SetPoint("TOPLEFT",x, -y)
+    local texture = grpMemFrame[i]:CreateTexture("iwtbgrptex" .. i)
+    texture:SetAllPoints(texture:GetParent())
+    if i < 5 then
+      texture:SetColorTexture(0,0.7,0,0.7)
+    else
+      texture:SetColorTexture(0.5,0.5,0.5,0.7)
+    end
+    grpMemSlotFrame[i] = {}
+    
+    for n=1, 5 do -- 5 frames per group
+      local slotx = (GUIgrpSlotSizeX +5) * (n -1)
+      --local sloty = (GUIgrpSlotSizeY * i) + 5
+      grpMemSlotFrame[i][n] = CreateFrame("Button", "iwtbgrpslot" .. i .. "-" .. n, grpMemFrame[i])
+      grpMemSlotFrame[i][n]:SetWidth(GUIgrpSlotSizeX)
+      grpMemSlotFrame[i][n]:SetHeight(GUIgrpSlotSizeY)
+      grpMemSlotFrame[i][n]:ClearAllPoints()
+      --obj:SetPoint(point, relativeTo, relativePoint, ofsx, ofsy);
+      --grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", "iwtbgrp" .. i, "CENTER", slotx, -sloty)
+      grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
+      local texture = grpMemSlotFrame[i][n]:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
+      local fontstring = grpMemSlotFrame[i][n]:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
+      texture:SetAllPoints(texture:GetParent())
+      texture:SetColorTexture(0,0,0,1)
+      --[[fontstring:SetPoint("TOP", 0, 0)
+      fontstring:SetPoint("BOTTOM", 0, 0)
+      fontstring:SetPoint("LEFT", fontstring:GetParent():GetHeight() + 4, 0)
+      fontstring:SetPoint("RIGHT", -fontstring:GetParent():GetHeight() - 4, 0)]]
+      fontstring:SetPoint("CENTER")
+      fontstring:SetJustifyH("CENTER")
+      fontstring:SetJustifyV("CENTER")
+      local font_valid = fontstring:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+      if not font_valid then
+        print("Font not valid")
+      end
+      fontstring:SetText("Raider " .. i .. " - " .. n)
+
+      grpMemSlotFrame[i][n].nameText = fontstring
+      
+      grpMemSlotFrame[i][n]:RegisterForDrag("LeftButton");
+      grpMemSlotFrame[i][n]:RegisterForClicks("RightButtonDown");
+      grpMemSlotFrame[i][n]:SetMovable(true);
+      grpMemSlotFrame[i][n]:EnableMouse(true);
+      grpMemSlotFrame[i][n]:SetScript("OnDragStart", function(s, ...) s:StartMoving() s:SetFrameStrata("TOOLTIP") end);
+      grpMemSlotFrame[i][n]:SetScript("OnDragStop", function(s, ...)
+        --[[if ns.gm.MemberFrameEmpty(s) then
+          s:StopMovingOrSizing();
+          RSUM_ReturnSavedFramePosition();
+          return;
+        end]]
+        s:StopMovingOrSizing();
+        --s:ClearAllPoints()
+        s:SetFrameStrata("FULLSCREEN");
+        
+        local sourceGroup = tonumber(string.sub(s:GetName(), -3, -3))
+        local mousex, mousey = GetCursorPosition();
+        local scale = UIParent:GetEffectiveScale();
+        mousex = mousex / scale;
+        mousey = mousey / scale;
+        --print(mousex, mousey)
+        local targetgroup, targetmember = MemberFrameContainsPoint(mousex, mousey);
+        if targetgroup then
+          --local sourcegroup, sourcemember = RSUM_GetGroupMemberByFrame(s)
+          print("tgrp: " .. targetgroup .. " sbut: " .. s:GetName())
+          
+          if targetmember then
+            print("slot: " .. targetmember)
+            --[[if ns.gm.Member(targetgroup, targetmember) == nil then
+              --ns.gm.Move(sourcegroup, sourcemember, targetgroup);
+            else
+              --ns.gm.Swap(sourcegroup, sourcemember, targetgroup, targetmember);
+            end]]
+          else
+            --ns.gm.Move(sourcegroup, sourcemember, targetgroup);
+          end
+          
+          -- Redraw group frames
+          --print(string.sub(s:GetName(), -3, -3))
+          
+          if targetgroup ~= sourceGroup then
+            print("redraw source")
+            redrawGroup(targetgroup)
+          end
+          
+          
+          --RSUM_GroupSync(false);
+          --RSUM_UpdateWindows();
+        end
+        -- Redraw source group in case button is left outside our frames
+        redrawGroup(sourceGroup)
+      end);
+
+      grpMemSlotFrame[i][n]:SetScript("OnClick", function(s)
+        print(s:GetName())
+        s.nameText:SetText("click me!")
+      end);
+      
+      --[[local texture = groupmemberframes[group][member]:CreateTexture("rsumgroup" .. group .. "memberwindowtexture" .. member);
+      local fontstring = groupmemberframes[group][member]:CreateFontString("rsumgroup" .. group .. "memberwindowstring" .. member);
+      texture:SetAllPoints(texture:GetParent());
+      texture:SetColorTexture(unpack(groupmemberframecolor));
+      texture:SetDrawLayer("BACKGROUND", 0);
+      groupmemberframes[group][member].background = texture;
+      
+      fontstring:SetPoint("TOP", 0, 0);
+      fontstring:SetPoint("BOTTOM", 0, 0);
+      fontstring:SetPoint("LEFT", fontstring:GetParent():GetHeight() + 4, 0);
+      fontstring:SetPoint("RIGHT", -fontstring:GetParent():GetHeight() - 4, 0);
+      fontstring:SetJustifyH("CENTER");
+      fontstring:SetJustifyV("CENTER");
+      local font_valid = fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "");
+      if not font_valid then
+        print("Font not valid");
+      end
+      groupmemberframes[group][member].nameText = fontstring;
+      
+      texture = groupmemberframes[group][member]:CreateTexture();
+      texture:SetPoint("LEFT", 4, 0);
+      texture:SetPoint("RIGHT", texture:GetParent(), "LEFT", texture:GetParent():GetHeight() + 4, 0);
+      texture:SetHeight(texture:GetParent():GetHeight());
+      texture:SetTexture("Interface\\LFGFRAME\\UI-LFG-ICON-PORTRAITROLES.tga");
+      texture:SetDrawLayer("OVERLAY", 7);
+      groupmemberframes[group][member].roleTexture = texture;
+      texture:Hide();
+      
+      groupmemberframes[group][member]:SetFrameStrata("FULLSCREEN");
+      groupmemberframes[group][member]:RegisterForDrag("LeftButton");
+      groupmemberframes[group][member]:RegisterForClicks("RightButtonDown");
+      groupmemberframes[group][member]:SetMovable(true);
+      groupmemberframes[group][member]:EnableMouse(true);
+      groupmemberframes[group][member]:SetScript("OnDragStart", RSUM_OnDragStart);
+      groupmemberframes[group][member]:SetScript("OnDragStop", RSUM_OnDragStop);
+      groupmemberframes[group][member]:SetScript("OnEnter", RSUM_OnEnter);
+      groupmemberframes[group][member]:SetScript("OnLeave", RSUM_OnLeave);]]
+    end
+  
+  end
+  
+  -- Dropdown buttons (for raid leader tab)
+  expacRLButton = CreateFrame("Frame", "expacrlbutton", rlTab, "UIDropDownMenuTemplate")
+  expacRLButton:SetPoint("TOPLEFT", 0, -20)
+  UIDropDownMenu_SetWidth(expacRLButton, 200)
+  UIDropDownMenu_Initialize(expacRLButton, raidsDropdownMenu)
+  UIDropDownMenu_SetText(expacRLButton, L["Select expansion"])
+  
+  instanceRLButton = CreateFrame("Frame", "instancerlbutton", rlTab, "UIDropDownMenuTemplate")
+  instanceRLButton:SetPoint("TOPLEFT", 250, -20)
+  UIDropDownMenu_SetWidth(instanceRLButton, 200)
+  UIDropDownMenu_Initialize(instanceRLButton, raidsDropdownMenu)
+  UIDropDownMenu_SetText(instanceRLButton, L["Select raid"])
+  
+  bossesRLButton = CreateFrame("Frame", "bossesrlbutton", rlTab, "UIDropDownMenuTemplate")
+  bossesRLButton:SetPoint("TOPLEFT", 500, -20)
+  UIDropDownMenu_SetWidth(bossesRLButton, 200)
+  UIDropDownMenu_Initialize(bossesRLButton, raidsDropdownMenu)
+  UIDropDownMenu_SetText(bossesRLButton, L["Select boss"])
+  
+  --------------------------------------------------------------------------------------------------------------
+  --------------------------------------------------------------------------------------------------------------
+  
+  -- Dropdown buttons (for raider tab)
   expacButton = CreateFrame("Frame", "expacbutton", raiderTab, "UIDropDownMenuTemplate")
   expacButton:SetPoint("TOPLEFT", 0, -20)
   --expacButton:SetScript("OnClick", MyDropDownMenuButton_OnClick)
@@ -881,7 +1168,7 @@ function iwtb:OnEnable()
   raiderTab:Show()  -- Show page 1.
   rlTab:Hide()  -- Hide all other pages (in this case only one).
   
-  windowframe:Hide()
+  --windowframe:Hide()
 end
 
 function iwtb:OnDisable()

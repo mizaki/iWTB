@@ -4,44 +4,50 @@ local Serializer = LibStub("AceSerializer-3.0")
 local Compressor = LibStub("LibCompress")
 local Encoder = Compressor:GetAddonEncodeTable()
 
+local commSpec = 1 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
+
+local function printTable(table)
+  --print(type(table))
+  if type(table) == "table" then
+    if table == nil then print("Empty table") end -- this won't work?
+    for key, value in pairs(table) do
+        print("k: " .. key .. " v: " .. value)
+    end
+  end
+end
+
 -- Comms channel prefixes
-REQUEST_HASH = "IWTB_REQUEST_HASH"
-REQUEST_DATA = "IWTB_REQUEST_DATA"
-UPDATE_HASH = "IWTB_UPDATE_HASH"
+REQUEST_HASH = "IWTB_REQ_HASH"
+REQUEST_DATA = "IWTB_REQ_DATA"
+--UPDATE_HASH = "IWTB_UPDATE_HASH"
 UPDATE_DATA = "IWTB_UPDATE_DATA"
 
 iwtb.encodeData = function (rType, data)
   -- rType (not the game!) is if we return just the HASH or the full compressed/hashed data
+  data.commSpec = commSpec
+  local serData = Serializer:Serialize(data)
+      
+  local hash = Compressor:fcs32init()
+  hash = Compressor:fcs32update(hash, serData)
+  hash = Compressor:fcs32final(hash)
+  hash = string.format("%010s", tostring(hash)) -- Pad the hash
+  
   if rType == "hash" then
     -- Just the hash (man)
-      local serData = Serializer:Serialize(data)
-      
-      local hash = Compressor:fcs32init()
-      hash = Compressor:fcs32update(hash, serData)
-      hash = Compressor:fcs32final(hash)
-      hash = string.format("%010s", tostring(hash)) -- Pad the hash
-      print(hash)
-      print("hash: " .. hash)
-      return hash
+    return hash
   else
     -- Do the full beans
-      local serData = Serializer:Serialize(data)
-      
-      local hash = Compressor:fcs32init()
-      hash = Compressor:fcs32update(hash, serData)
-      hash = Compressor:fcs32final(hash)
-      hash = string.format("%010s", tostring(hash)) -- Pad the hash
-      -- Compressing the hash?
-      data = data .. hash
-      
-      local compData = Compressor:CompressHuffman(data)
-      local encData = Encoder:Encode(compData)
-      
-      return encData
+    -- Compressing the hash?
+    serData = serData .. hash
+    
+    local compData = Compressor:CompressHuffman(serData)
+    local encData = Encoder:Encode(compData)
+    
+    return encData
   end
 end
 
-local function decodeData(text)
+iwtb.decodeData = function (text)
   local compData = Encoder:Decode(text)
   
   -- Decompress
@@ -61,14 +67,14 @@ local function decodeData(text)
     hash = Compressor:fcs32final(hash)
     
     if hash ~= msgHash then
-      print("Hash mismatch!")
+      print("Msg hash mismatch!")
       return false
     end
   end  
   
-  local succes, data = Serializer:Deserialize(data)  
-  if not succes then
-    print("Deserialize failed: " .. data)
+  local success, data = Serializer:Deserialize(data)  
+  if not success then
+    print("Decode failed: " .. data)
     return false
   end
   
@@ -76,44 +82,96 @@ local function decodeData(text)
 end
 
 -- Send data
-local function SendData(prefix, data, target) 
-  data.commSpec = commSpec
+iwtb.sendData = function (prefix, data, target) 
+  --data.commSpec = commSpec
+  --local data = iwtb.encodeData(data)
+  --local outdata
+  local sType
   
-  local data = encodeData(data)
+  --if prefix == "uhash" then
+    --sType = UPDATE_HASH
+  if prefix == "rhash" then
+    sType = REQUEST_HASH
+  elseif prefix == "udata" then
+    sType = UPDATE_DATA
+    data.commSpec = commSpec
+    data = iwtb.encodeData("data", data)
+  elseif prefix == "rdata" then
+    sType = REQUEST_DATA
+  end
   
   -- Targets are /w, raid (and guild?)
   if target == "raid" then
-    AceComm:SendCommMessage(prefix, data, "RAID")
-  elseif target == "whisper" then
-    AceComm:SendCommMessage(prefix, data, "WHISPER", target)
+    AceComm:SendCommMessage(sType, data, "RAID")
   elseif target == "guild" then
-    AceComm:SendCommMessage(prefix, data, "GUILD", target)
+    AceComm:SendCommMessage(sType, data, "GUILD")
+  elseif target ~= "" then -- Presume target is char name
+    AceComm:SendCommMessage(sType, data, "WHISPER", target)
   end
   
 end
 
-local function UpdateData(prefix, text, distribution, sender)
+------------------------------------
+-- Listening functions
+------------------------------------
+
+-- new data from raider
+local function updateData(prefix, text, distribution, sender)
+  --sender = StripRealm(sender)
+  --if sender == playerName or tContains(sessionBlacklist, sender) then
+    --return
+  --end
+  
+  -- Do some check if we care about data. Requires promoted? In raid? Have an option to ignore all data?
+  
+  print("Received update - "  .. sender)
+  local success, data = iwtb.decodeData(text)
+  
+  --[[if not(success) then
+    return AceComm:SendCommMessage(REQUEST_MSG_PREFIX, BossList.lastUpdates[sender], "WHISPER", sender)
+  end]]
+  
+  if data.commSpec == nil or data.commSpec < commSpec then
+    --tinsert(sessionBlacklist, sender)
+    print("Old comm spec: " .. sender)
+    return
+  elseif data.commSpec > commSpec then
+    --if not(gottenUpdateMessage) then
+      print("Newer comm spec: " .. sender)
+      --gottenUpdateMessage = true
+    --end
+    return
+  else
+    print("Update data")
+    print_table(data)
+  end
+  
+  -- Update local data
+  --BossList.MergeData(table, sender)
+end
+
+local function requestData(prefix, text, distribution, sender)
   --sender = StripRealm(sender)
   --if sender == playerName or tContains(sessionBlacklist, sender) then
     --return
   --end
   
   print("Received update - " .. prefix .. " from " .. sender)
-  local succes, data = decodeData(text)
+  local success, data = iwtb.decodeData(text)
   
-  --[[if not(succes) then
+  --[[if not(success) then
     return AceComm:SendCommMessage(REQUEST_MSG_PREFIX, BossList.lastUpdates[sender], "WHISPER", sender)
   end]]
   
   if data.commSpec == nil or data.commSpec < commSpec then
     --tinsert(sessionBlacklist, sender)
-    print("BossList: Received message from older version from " .. sender .. ". Please tell him/her to update.")
+    print("Old comm spec: " .. sender)
     return
-  elseif data.commSpec > BossList.REVISION then
-    if not(gottenUpdateMessage) then
-      print("BossList: Received message from newer version. Please update your BossList")
-      gottenUpdateMessage = true
-    end
+  elseif data.commSpec > commSpec then
+    --if not(gottenUpdateMessage) then
+      print("Newer comm spec: " .. sender)
+      --gottenUpdateMessage = true
+    --end
     return
   else
     --data.commSpec = nil
@@ -123,8 +181,40 @@ local function UpdateData(prefix, text, distribution, sender)
   --BossList.MergeData(table, sender)
 end
 
+--[[local function updateHash(prefix, text, distribution, sender)
+  print("Received hash - " .. prefix .. " from " .. sender)
+  
+  if data.commSpec == nil or data.commSpec < commSpec then
+    --tinsert(sessionBlacklist, sender)
+    print("Old/absent comm spec: " .. sender)
+    return
+  elseif data.commSpec > commSpec then
+    --if not(gottenUpdateMessage) then
+      print("Newer comm spec: " .. sender)
+      --gottenUpdateMessage = true
+    --end
+    return
+  else
+    --data.commSpec = nil
+  end
+  
+  -- Update local hash
+end]]
 
+-- RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
+local function requestHash(prefix, text, distribution, sender)
+  print("Request hash - " .. sender)
+  print("Their hash: " .. text .. " Your hash: " .. iwtb.raiderDB.char.bossListHash)
+  
+  if text ~= iwtb.raiderDB.char.bossListHash then
+    -- Send current boss list
+    print("Boss list hash mismatch - sending updated data")
+    iwtb.sendData("udata", iwtb.raiderDB.char, sender)
+  end
+  
+end
 
---AceComm:RegisterComm(STATE_MSG_PREFIX, MessageHandler)
---AceComm:RegisterComm(REQUEST_MSG_PREFIX, RequestHandler)
-AceComm:RegisterComm(UPDATE_DATA, UpdateData)
+AceComm:RegisterComm(UPDATE_DATA, updateData)
+AceComm:RegisterComm(REQUEST_DATA, requestData)
+--AceComm:RegisterComm(UPDATE_HASH, updateHash)
+AceComm:RegisterComm(REQUEST_HASH, requestHash)
