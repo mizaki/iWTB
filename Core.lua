@@ -481,17 +481,17 @@ function iwtb:OnEnable()
       -- fill in raids with arg1 as expac id
       getInstances(arg1)
       raiderSelectedTier.expacid = arg1
-      UIDropDownMenu_SetText(expacButton, self:GetText())
+      L_UIDropDownMenu_SetText(expacButton, self:GetText())
       dbSchemaCheck("expacs")
       
     elseif arg2 == "expacrlbutton" then
       -- fill in raids with arg1 as expac id
       getInstances(arg1, true)
       rlSelectedTier.expacid = arg1
-      UIDropDownMenu_SetText(expacRLButton, self:GetText())
+      L_UIDropDownMenu_SetText(expacRLButton, self:GetText())
       
     elseif arg2 == "instancebutton" then
-    UIDropDownMenu_SetText(instanceButton, self:GetText())
+    L_UIDropDownMenu_SetText(instanceButton, self:GetText())
     raiderSelectedTier.instid = arg1
     dbSchemaCheck("inst", raiderSelectedTier.expacid)
       -- Generate boss frames within raiderBossListFrame
@@ -529,12 +529,12 @@ function iwtb:OnEnable()
             fontstring:SetText(bossList.bosses[bossid])
             
             --add dropdown menu for need/minor/os etc.
-            local bossWantdropdown = CreateFrame("Frame", "bossWantdropdown" .. bossid, bossFrame[idofboss], "UIDropDownMenuTemplate")
+            local bossWantdropdown = CreateFrame("Frame", "bossWantdropdown" .. bossid, bossFrame[idofboss], "L_UIDropDownMenuTemplate")
             bossWantdropdown:SetPoint("RIGHT", 0, 0)
             --expacButton:SetScript("OnClick", MyDropDownMenuButton_OnClick)
-            UIDropDownMenu_SetWidth(bossWantdropdown, 100) -- Use in place of dropDown:SetWidth
+            L_UIDropDownMenu_SetWidth(bossWantdropdown, 100) -- Use in place of dropDown:SetWidth
             -- Bind an initializer function to the dropdown; see previous sections for initializer function examples.
-            UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
+            L_UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
             
             -- Set text to current selection if there is one otherwise default msg
             -- Need to change bossid to a string as that's how the table is created. Maybe we should create as a number? Depends on later use and which one is less hassle.
@@ -543,9 +543,9 @@ function iwtb:OnEnable()
             --if raiderDB.char.bosses[idofboss] ~= nil then
             if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
             and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~= nil then
-              UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss]])
+              L_UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss]])
             else
-              UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
+              L_UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
             end
             
             i = i +1
@@ -613,13 +613,13 @@ function iwtb:OnEnable()
       end
       
     elseif arg2 == "instancerlbutton" then
-      UIDropDownMenu_SetText(instanceRLButton, self:GetText())
+      L_UIDropDownMenu_SetText(instanceRLButton, self:GetText())
       rlSelectedTier.instid = arg1
       -- get the boss list
       getBosses(arg1, true)
     
     elseif arg2 == "bossesrlbutton" then -- only in RL tab
-      UIDropDownMenu_SetText(bossesRLButton, self:GetText())
+      L_UIDropDownMenu_SetText(bossesRLButton, self:GetText())
       print(self:GetID() .. " : " .. self:GetName())
       print("expacid: " .. rlSelectedTier.expacid .. " tierid: " .. rlSelectedTier.instid)
       print("bossid: ", instanceBosses.order[self:GetID()])
@@ -635,7 +635,7 @@ function iwtb:OnEnable()
   
   -- Fill menu with items
   function raidsDropdownMenu(frame, level, menuList)
-    local info = UIDropDownMenu_CreateInfo()
+    local info = L_UIDropDownMenu_CreateInfo()
     --printTable(frame)
     if frame:GetName() == "expacbutton" then
       -- Get expansions
@@ -648,7 +648,7 @@ function iwtb:OnEnable()
         
         info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
         --if key == 7 then info.checked = true end
-        UIDropDownMenu_AddButton(info)
+        L_UIDropDownMenu_AddButton(info)
       end
     
     elseif frame:GetName() == "expacrlbutton" then
@@ -662,7 +662,7 @@ function iwtb:OnEnable()
         
         info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
         --if key == 7 then info.checked = true end
-        UIDropDownMenu_AddButton(info)
+        L_UIDropDownMenu_AddButton(info)
       end
       
     elseif frame:GetName() == "instancebutton" then
@@ -675,7 +675,7 @@ function iwtb:OnEnable()
           
           info.text, info.notCheckable, info.arg1, info.arg2 = tierRaidInstances.raids[value], true, value, frame:GetName()
           
-          UIDropDownMenu_AddButton(info)
+          L_UIDropDownMenu_AddButton(info)
         end
       end
     
@@ -686,7 +686,7 @@ function iwtb:OnEnable()
         for key, value in pairs(tierRLRaidInstances.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
           info.text, info.notCheckable, info.arg1, info.arg2 = tierRLRaidInstances.raids[value], true, value, frame:GetName()
           
-          UIDropDownMenu_AddButton(info)
+          L_UIDropDownMenu_AddButton(info)
         end
       end
       
@@ -696,7 +696,7 @@ function iwtb:OnEnable()
         info.func = raidsDropdownMenuOnClick
         for key, value in pairs(instanceBosses.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
           info.text, info.notCheckable, info.arg1, info.arg2 = instanceBosses.bosses[value], true, value, frame:GetName()
-          UIDropDownMenu_AddButton(info)
+          L_UIDropDownMenu_AddButton(info)
         end
       end
     end
@@ -733,7 +733,7 @@ function iwtb:OnEnable()
     --print("SerStr: " .. raiderBossesStr)
     
     -- Set dropdown text to new selection
-    UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
+    L_UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
     -- Update hash
     print("Old hash: " .. raiderDB.char.bossListHash)
     raiderDB.char.bossListHash = iwtb.encodeData("hash", raiderDB.char.expac) -- Do we want to hash here? Better to do it before sending or on request?
@@ -743,7 +743,7 @@ function iwtb:OnEnable()
     
   -- Fill menu with desirability list
   function bossWantDropDown_Menu(frame, level, menuList)
-    local info = UIDropDownMenu_CreateInfo()
+    local info = L_UIDropDownMenu_CreateInfo()
     
     --print(string.match(frame:GetName(), "%d+"))
     local idofboss = string.match(frame:GetName(), "%d+")
@@ -770,7 +770,7 @@ function iwtb:OnEnable()
       end
       
     
-      UIDropDownMenu_AddButton(info)
+      L_UIDropDownMenu_AddButton(info)
     end
       
   end
@@ -1091,43 +1091,43 @@ function iwtb:OnEnable()
   end
   
   -- Dropdown buttons (for raid leader tab)
-  expacRLButton = CreateFrame("Frame", "expacrlbutton", rlTab, "UIDropDownMenuTemplate")
+  expacRLButton = CreateFrame("Frame", "expacrlbutton", rlTab, "L_UIDropDownMenuTemplate")
   expacRLButton:SetPoint("TOPLEFT", 0, -20)
-  UIDropDownMenu_SetWidth(expacRLButton, 200)
-  UIDropDownMenu_Initialize(expacRLButton, raidsDropdownMenu)
-  UIDropDownMenu_SetText(expacRLButton, L["Select expansion"])
+  L_UIDropDownMenu_SetWidth(expacRLButton, 200)
+  L_UIDropDownMenu_Initialize(expacRLButton, raidsDropdownMenu)
+  L_UIDropDownMenu_SetText(expacRLButton, L["Select expansion"])
   
-  instanceRLButton = CreateFrame("Frame", "instancerlbutton", rlTab, "UIDropDownMenuTemplate")
+  instanceRLButton = CreateFrame("Frame", "instancerlbutton", rlTab, "L_UIDropDownMenuTemplate")
   instanceRLButton:SetPoint("TOPLEFT", 250, -20)
-  UIDropDownMenu_SetWidth(instanceRLButton, 200)
-  UIDropDownMenu_Initialize(instanceRLButton, raidsDropdownMenu)
-  UIDropDownMenu_SetText(instanceRLButton, L["Select raid"])
+  L_UIDropDownMenu_SetWidth(instanceRLButton, 200)
+  L_UIDropDownMenu_Initialize(instanceRLButton, raidsDropdownMenu)
+  L_UIDropDownMenu_SetText(instanceRLButton, L["Select raid"])
   
-  bossesRLButton = CreateFrame("Frame", "bossesrlbutton", rlTab, "UIDropDownMenuTemplate")
+  bossesRLButton = CreateFrame("Frame", "bossesrlbutton", rlTab, "L_UIDropDownMenuTemplate")
   bossesRLButton:SetPoint("TOPLEFT", 500, -20)
-  UIDropDownMenu_SetWidth(bossesRLButton, 200)
-  UIDropDownMenu_Initialize(bossesRLButton, raidsDropdownMenu)
-  UIDropDownMenu_SetText(bossesRLButton, L["Select boss"])
+  L_UIDropDownMenu_SetWidth(bossesRLButton, 200)
+  L_UIDropDownMenu_Initialize(bossesRLButton, raidsDropdownMenu)
+  L_UIDropDownMenu_SetText(bossesRLButton, L["Select boss"])
   
   --------------------------------------------------------------------------------------------------------------
   --------------------------------------------------------------------------------------------------------------
   
   -- Dropdown buttons (for raider tab)
-  expacButton = CreateFrame("Frame", "expacbutton", raiderTab, "UIDropDownMenuTemplate")
+  expacButton = CreateFrame("Frame", "expacbutton", raiderTab, "L_UIDropDownMenuTemplate")
   expacButton:SetPoint("TOPLEFT", 0, -20)
   --expacButton:SetScript("OnClick", MyDropDownMenuButton_OnClick)
-  UIDropDownMenu_SetWidth(expacButton, 200) -- Use in place of dropDown:SetWidth
+  L_UIDropDownMenu_SetWidth(expacButton, 200) -- Use in place of dropDown:SetWidth
   -- Bind an initializer function to the dropdown; see previous sections for initializer function examples.
-  UIDropDownMenu_Initialize(expacButton, raidsDropdownMenu)
-  UIDropDownMenu_SetText(expacButton, L["Select expansion"])
+  L_UIDropDownMenu_Initialize(expacButton, raidsDropdownMenu)
+  L_UIDropDownMenu_SetText(expacButton, L["Select expansion"])
   
-  instanceButton = CreateFrame("Frame", "instancebutton", raiderTab, "UIDropDownMenuTemplate")
+  instanceButton = CreateFrame("Frame", "instancebutton", raiderTab, "L_UIDropDownMenuTemplate")
   instanceButton:SetPoint("TOPLEFT", 250, -20)
   --expacButton:SetScript("OnClick", MyDropDownMenuButton_OnClick)
-  UIDropDownMenu_SetWidth(instanceButton, 200) -- Use in place of dropDown:SetWidth
+  L_UIDropDownMenu_SetWidth(instanceButton, 200) -- Use in place of dropDown:SetWidth
   -- Bind an initializer function to the dropdown; see previous sections for initializer function examples.
-  UIDropDownMenu_Initialize(instanceButton, raidsDropdownMenu)
-  UIDropDownMenu_SetText(instanceButton, L["Select raid"])
+  L_UIDropDownMenu_Initialize(instanceButton, raidsDropdownMenu)
+  L_UIDropDownMenu_SetText(instanceButton, L["Select raid"])
   
   -- Add tab buttons
   local raiderButton = CreateFrame("Button", "$parentTab1", windowframe, "TabButtonTemplate")
