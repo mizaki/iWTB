@@ -4,8 +4,8 @@
 ## Author: Your Name Here
 ## Notes: Helps organise which raider wants which boss.
 ## SavedVariables: iWTBDB, iWTBRaiderDB, iWTBRaidLeaderDB
-## Dependencies: LibUIDropDownMenu
-## OptionalDeps: LibStub, Ace3
+## Dependencies: 
+## OptionalDeps: LibStub, Ace3, LibUIDropDownMenu
 ## X-Embeds: LibStub, Ace3
 
 embeds.xml

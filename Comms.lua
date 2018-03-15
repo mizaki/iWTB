@@ -17,14 +17,14 @@ local function printTable(table)
 end
 
 -- Comms channel prefixes
-REQUEST_HASH = "IWTB_REQ_HASH"
+XFER_HASH = "IWTB_XFER_HASH"
 REQUEST_DATA = "IWTB_REQ_DATA"
 --UPDATE_HASH = "IWTB_UPDATE_HASH"
-UPDATE_DATA = "IWTB_UPDATE_DATA"
+XFER_DATA = "IWTB_XFER_DATA"
 
 iwtb.encodeData = function (rType, data)
   -- rType (not the game!) is if we return just the HASH or the full compressed/hashed data
-  data.commSpec = commSpec
+  --data.commSpec = commSpec
   local serData = Serializer:Serialize(data)
       
   local hash = Compressor:fcs32init()
@@ -84,16 +84,16 @@ end
 -- Send data
 iwtb.sendData = function (prefix, data, target) 
   --data.commSpec = commSpec
-  --local data = iwtb.encodeData(data)
+  local data = data
   --local outdata
   local sType
   
   --if prefix == "uhash" then
     --sType = UPDATE_HASH
   if prefix == "rhash" then
-    sType = REQUEST_HASH
+    sType = XFER_HASH
   elseif prefix == "udata" then
-    sType = UPDATE_DATA
+    sType = XFER_DATA
     data.commSpec = commSpec
     data = iwtb.encodeData("data", data)
   elseif prefix == "rdata" then
@@ -115,8 +115,20 @@ end
 -- Listening functions
 ------------------------------------
 
+local function dbRLRaiderCheck(raider, expac, tier)
+  if iwtb.raidLeaderDB.char.raiders[raider] == nil then
+    iwtb.raidLeaderDB.char.raiders[raider] = {}
+    iwtb.raidLeaderDB.char.raiders[raider].bossListHash = ""
+    --iwtb.raidLeaderDB.char.raiders[raider].expac = {}
+  end
+  -- Below is for when we update only say an expac, tier or boss (if enabling loot item selection). For now we just send the whole lot!
+  --[[if iwtb.raidLeaderDB.raiders[raider].expac[expac] == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac] = {} end
+  if iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier] == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier] = {} end
+  if iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier].bosses == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier].bosses = {} end]]
+end
+
 -- new data from raider
-local function updateData(prefix, text, distribution, sender)
+local function xferData(prefix, text, distribution, sender)
   --sender = StripRealm(sender)
   --if sender == playerName or tContains(sessionBlacklist, sender) then
     --return
@@ -142,8 +154,13 @@ local function updateData(prefix, text, distribution, sender)
     --end
     return
   else
-    print("Update data")
-    print_table(data)
+    --print("Update data")
+    --print_table(data.expac)
+    dbRLRaiderCheck(sender)
+    iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
+    iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.encodeData("hash", data.expac)
+    
+    --print_table(iwtb.raidLeaderDB.char)
   end
   
   -- Update local data
@@ -202,11 +219,12 @@ end
 end]]
 
 -- RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
-local function requestHash(prefix, text, distribution, sender)
-  print("Request hash - " .. sender)
-  print("Their hash: " .. text .. " Your hash: " .. iwtb.raiderDB.char.bossListHash)
+local function xferHash(prefix, text, distribution, sender)
+  print("Request hash - " .. sender .. " Dist: " .. distribution)
+  dbRLRaiderCheck(sender)
+  print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.raidLeaderDB.char.raiders[sender].bossListHash))
   
-  if text ~= iwtb.raiderDB.char.bossListHash then
+  if text ~= iwtb.raidLeaderDB.char.raiders[sender].bossListHash then
     -- Send current boss list
     print("Boss list hash mismatch - sending updated data")
     iwtb.sendData("udata", iwtb.raiderDB.char, sender)
@@ -214,7 +232,7 @@ local function requestHash(prefix, text, distribution, sender)
   
 end
 
-AceComm:RegisterComm(UPDATE_DATA, updateData)
+AceComm:RegisterComm(XFER_DATA, xferData)
 AceComm:RegisterComm(REQUEST_DATA, requestData)
 --AceComm:RegisterComm(UPDATE_HASH, updateHash)
-AceComm:RegisterComm(REQUEST_HASH, requestHash)
+AceComm:RegisterComm(XFER_HASH, xferHash)

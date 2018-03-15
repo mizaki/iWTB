@@ -38,10 +38,10 @@ local instanceRLButton = nil
 local bossesRLButton = nil
 
 -- GUI dimensions
-local GUIwindowSizeX = 700
-local GUIwindowSizeY = 600
-local GUItabWindowSizeX = 680
-local GUItabWindowSizeY = 540
+local GUIwindowSizeX = 800
+local GUIwindowSizeY = 700
+local GUItabWindowSizeX = 780
+local GUItabWindowSizeY = 640
 local GUItitleSizeX = 200
 local GUItitleSizeY = 30
 local GUItabButtonSizeX = 100
@@ -164,6 +164,7 @@ end
 --Return expansions
 local function getExpansions()
   --local numExpac = EJ_GetNumTiers()
+  
   if expacInfo == nil then
     expacInfo = {}
     for i=1, EJ_GetNumTiers() do
@@ -177,6 +178,10 @@ end
 
 -- Return the raids per expansion
 local function getInstances(expacID, isRL)
+  if ( not EncounterJournal ) then
+          EncounterJournal_LoadUI()
+  end
+  
   EJ_SelectTier(expacID)
   
   if isRL then
@@ -224,6 +229,10 @@ end
 
 -- Return the bosses per raid.
 local function getBosses(raidID, isRL)
+  if ( not EncounterJournal ) then
+          EncounterJournal_LoadUI()
+  end
+  
   local raidBosses = {}
   raidBosses.bosses = {}
   raidBosses.order = {}
@@ -231,7 +240,6 @@ local function getBosses(raidID, isRL)
   local finished = false
   
   repeat
-    
     if EJ_GetEncounterInfoByIndex(i, raidID) == nil then finished = true
     else
       local bossName = select(1, EJ_GetEncounterInfoByIndex(i, raidID))
@@ -254,13 +262,13 @@ local function getBosses(raidID, isRL)
 end
 
 local function dbSchemaCheck(level, expac)
-  print_table(raiderDB.char)
+  --print_table(raiderDB.char)
   if level == "expacs" then
     if expacInfo == nil then getExpansions() end
     for key, value in pairs(expacInfo) do
       if raiderDB.char.expac[key] == nil then raiderDB.char.expac[key] = {} end
     end
-    print_table(raiderDB.char)
+    --print_table(raiderDB.char)
   elseif level == "inst" and type(expac) == "number" then
     for key, value in pairs(tierRaidInstances.raids) do
       if raiderDB.char.expac[expac].tier == nil then raiderDB.char.expac[expac].tier = {} end
@@ -269,7 +277,7 @@ local function dbSchemaCheck(level, expac)
         raiderDB.char.expac[expac].tier[key].bosses = {}
       end
     end
-    print_table(raiderDB.char)
+    --print_table(raiderDB.char)
   end
 end
 ----------------------------------------------------------------
@@ -278,7 +286,7 @@ end
 -- Lovingly "inspired" by RSUM
 local function FrameContainsPoint(frame, x, y)
 	local left, bottom, width, height = frame:GetRect()
-  print(frame:GetName() .. " - " .. frame:GetRect())
+  --print(frame:GetName() .. " - " .. frame:GetRect())
 	if x >= left then
 		if y >= bottom then
 			if x <= left + width then
@@ -298,8 +306,8 @@ local function MemberFrameContainsPoint(x, y)
 			if FrameContainsPoint(grpMemFrame[i], x, y) then
 				for member=1,5 do
 					if FrameContainsPoint(grpMemSlotFrame[i][member], x, y) then
-            print("grp: " .. i .. " slot: " .. member)
-            print("x: " .. x .. " y: " ..y)
+            --print("grp: " .. i .. " slot: " .. member)
+            --print("x: " .. x .. " y: " ..y)
 						return i, member;
 					end
 				end
@@ -311,16 +319,89 @@ local function MemberFrameContainsPoint(x, y)
 end
 
 local function redrawGroup(grp)
-  for n=1, 5 do
-    local slotx = (GUIgrpSlotSizeX +5) * (n -1)
-    --print(grpMemSlotFrame[tgrp][n]:GetName())
-    grpMemSlotFrame[grp][n]:ClearAllPoints()
-    grpMemSlotFrame[grp][n]:SetParent(grpMemFrame[grp])
-    grpMemSlotFrame[grp][n]:SetPoint("TOPLEFT", slotx, -3)
-    --grpMemSlotFrame[tgrp][n]:
+  if type(grp) == "number" then
+    for n=1, 5 do
+      local slotx = (GUIgrpSlotSizeX +5) * (n -1)
+      --print(grpMemSlotFrame[tgrp][n]:GetName())
+      grpMemSlotFrame[grp][n]:ClearAllPoints()
+      grpMemSlotFrame[grp][n]:SetParent(grpMemFrame[grp])
+      grpMemSlotFrame[grp][n]:SetPoint("TOPLEFT", slotx, -3)
+      grpMemSlotFrame[grp][n].nameText:SetText(L["Empty"])
+      --grpMemSlotFrame[tgrp][n]:
+    end
+  else
+    for i=1, 8 do
+      for n=1, 5 do
+      local slotx = (GUIgrpSlotSizeX +5) * (n -1)
+      --print(grpMemSlotFrame[tgrp][n]:GetName())
+      grpMemSlotFrame[i][n]:ClearAllPoints()
+      grpMemSlotFrame[i][n]:SetParent(grpMemFrame[i])
+      grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
+      grpMemSlotFrame[i][n].nameText:SetText(L["Empty"])
+      --grpMemSlotFrame[tgrp][n]:
+    end
+    end
   end
   
 end
+
+local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss
+  -- First check if the player is in rl db
+  for tname, rldb in pairs(raidLeaderDB.char.raiders) do
+    --print("tname: " .. tname .. " name: " .. name)
+    if tname == name and rldb.expac ~= nil then
+      for expacid,expacs in pairs(rldb.expac) do
+        --print(expacid, expacs)
+        if expacid == expac then
+          for tierid, tiers in pairs(expacs.tier) do
+            --print(tierid, tiers)
+            if tierid == tier then
+              for bossid, desire in pairs(tiers.bosses) do
+                --print(type(bossid))
+                --print("bossid: " .. bossid .. " desire: " .. desire)
+                if bossid == boss then
+                  --print("want boss: " .. desire)
+                  return desire
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  return nil
+end
+
+local function raidUpdate(self)
+  local i = 1
+  local raidMembers = {}
+  while GetRaidRosterInfo(i) do
+    local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
+    --print(GetRaidRosterInfo(i))
+    if raidMembers[subgroup] == nil then raidMembers[subgroup] = {} end
+    tinsert(raidMembers[subgroup], { name= name, level = level, croll = combatRole})
+    --grpMemSlotFrame[subgroup][n].nameText:SetText(name)
+    i = i +1
+    if i > 40 then break end
+  end
+  -- Reset all frames
+  redrawGroup()
+  for subgrp,mem in pairs(raidMembers) do
+    --grpMemSlotFrame[subgroup][n].nameText:SetText(name)
+    --redrawGroup(subgrp)
+    for k, player in ipairs(mem) do
+      --print(player.name)
+      local desireid = hasDesire(player.name, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
+      --print("desireid: "  .. tostring(desireid))
+      grpMemSlotFrame[subgrp][k].nameText:SetText(player.name)
+      grpMemSlotFrame[subgrp][k].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
+    end
+  end
+  --print_table(raidMembers)
+end
+
+
 ---------------------------------
 function iwtb:OnInitialize()
 ---------------------------------
@@ -336,7 +417,7 @@ function iwtb:OnInitialize()
   }
   
   
-  local raiderLeaderDefaults = { -- is there any? boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
+  local raidLeaderDefaults = { -- is there any? boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
     char = {
       raiders = {
         --[[expac = {
@@ -620,9 +701,10 @@ function iwtb:OnEnable()
     
     elseif arg2 == "bossesrlbutton" then -- only in RL tab
       L_UIDropDownMenu_SetText(bossesRLButton, self:GetText())
-      print(self:GetID() .. " : " .. self:GetName())
-      print("expacid: " .. rlSelectedTier.expacid .. " tierid: " .. rlSelectedTier.instid)
-      print("bossid: ", instanceBosses.order[self:GetID()])
+      rlSelectedTier.bossid = arg1
+      --print(self:GetID() .. " : " .. self:GetName())
+      --print("expacid: " .. rlSelectedTier.expacid .. " tierid: " .. rlSelectedTier.instid)
+      --print("bossid: ", instanceBosses.order[self:GetID()])
       
       
     end
@@ -724,8 +806,8 @@ function iwtb:OnEnable()
         print(key, value)
     end]]
     --print(self:GetParent())
-    print("arg1: " .. tostring(arg1) .. " arg2: " .. tostring(arg2) .. " checked: " .. tostring(checked))
-    print("expacID: " .. raiderSelectedTier.expacid .. " tierID: " .. raiderSelectedTier.instid)
+    --print("arg1: " .. tostring(arg1) .. " arg2: " .. tostring(arg2) .. " checked: " .. tostring(checked))
+    --print("expacID: " .. raiderSelectedTier.expacid .. " tierID: " .. raiderSelectedTier.instid)
     -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
     raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
     -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
@@ -735,10 +817,10 @@ function iwtb:OnEnable()
     -- Set dropdown text to new selection
     L_UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
     -- Update hash
-    print("Old hash: " .. raiderDB.char.bossListHash)
+    --print("Old hash: " .. raiderDB.char.bossListHash)
     raiderDB.char.bossListHash = iwtb.encodeData("hash", raiderDB.char.expac) -- Do we want to hash here? Better to do it before sending or on request?
     --print(raiderDB.char.bosses[arg2])
-    print("New hash: " .. raiderDB.char.bossListHash)
+    --print("New hash: " .. raiderDB.char.bossListHash)
   end
     
   -- Fill menu with desirability list
@@ -866,14 +948,14 @@ function iwtb:OnEnable()
   texture = raiderBossListFrame:CreateTexture("iwtbraiderbosslisttex")
   texture:SetAllPoints(raiderBossListFrame)
   texture:SetColorTexture(0,0,0,1)
-  fontstring = raiderBossListFrame:CreateFontString("iwtbraidertesting")
+  --[[fontstring = raiderBossListFrame:CreateFontString("iwtbraidertesting")
   fontstring:SetAllPoints(raiderBossListFrame)
   if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
     print("Font not valid")
   end
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
-  fontstring:SetText("Boss list")
+  fontstring:SetText("Boss list")]]
   
   -- Raider send button
   local raiderSendButton = CreateFrame("Button", "iwtbraidersendbutton", raiderTab, "UIPanelButtonTemplate")
@@ -889,9 +971,9 @@ function iwtb:OnEnable()
   raiderSendButton:SetScript("OnClick", function(s)
     -- Send current desire list (to raid?)
     --local mydata = iwtb.encodeData("hash", raiderDB.char.bosses)
-    print("Hash: " .. raiderDB.char.bossListHash)
-    --iwtb.sendData("rhash", raiderDB.char.bossListHash, "raid")
-    iwtb.sendData("rhash", "0123456789", "raid") -- junk hash for testing
+    --print("Hash: " .. raiderDB.char.bossListHash)
+    iwtb.sendData("rhash", raiderDB.char.bossListHash, "raid")
+    --iwtb.sendData("rhash", "0123456789", "raid") -- junk hash for testing
   end)
   
   -- Raider reset DB button
@@ -926,6 +1008,37 @@ function iwtb:OnEnable()
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Raid Leader")
   
+  -- Raid Leader reset DB button
+  local rlResetDBButton = CreateFrame("Button", "iwtbrlresetdbbutton", rlTab, "UIPanelButtonTemplate")
+  rlResetDBButton:SetWidth(GUItabButtonSizeX)
+  rlResetDBButton:SetHeight(GUItabButtonSizeY)
+  rlResetDBButton:SetText(L["Reset DB"])
+  rlResetDBButton:SetPoint("CENTER", rlResetDBButton:GetParent(), "BOTTOMRIGHT", -250, 30)
+  texture = rlResetDBButton:CreateTexture("rlresetdbbuttex")
+  texture:SetAllPoints(rlResetDBButton)
+  texture:SetColorTexture(0, 0, 0, 1)
+  rlResetDBButton:Enable()
+  rlResetDBButton:RegisterForClicks("LeftButtonUp")
+  rlResetDBButton:SetScript("OnClick", function(s)
+    raidLeaderDB:ResetDB()
+  end)
+  
+  -- Raid Leader test button
+  local rlTestButton = CreateFrame("Button", "iwtbrltestbutton", rlTab, "UIPanelButtonTemplate")
+  rlTestButton:SetWidth(GUItabButtonSizeX)
+  rlTestButton:SetHeight(GUItabButtonSizeY)
+  rlTestButton:SetText("Test")
+  rlTestButton:SetPoint("CENTER", rlTestButton:GetParent(), "BOTTOMRIGHT", -450, 30)
+  texture = rlTestButton:CreateTexture("rltestbuttex")
+  texture:SetAllPoints(rlTestButton)
+  texture:SetColorTexture(0, 0, 0, 1)
+  rlTestButton:Enable()
+  rlTestButton:RegisterForClicks("LeftButtonUp")
+  rlTestButton:SetScript("OnClick", function(s)
+    raidUpdate()
+    --hasDesire("Renyou", 7, 946, "1992")
+  end)
+  
   -- rlRaiderListFrame
   rlRaiderListFrame = CreateFrame("Frame", "iwtbrlraiderlistframe", rlTab)
   rlRaiderListFrame:SetWidth(GUItabWindowSizeX -20)
@@ -934,14 +1047,14 @@ function iwtb:OnEnable()
   texture = rlRaiderListFrame:CreateTexture("iwtbrlraiderlistframetex")
   texture:SetAllPoints(rlRaiderListFrame)
   texture:SetColorTexture(0.1,0.1,0.1,1)
-  fontstring = rlRaiderListFrame:CreateFontString("iwtbrlraiderlistframetesting")
+  --[[fontstring = rlRaiderListFrame:CreateFontString("iwtbrlraiderlistframetesting")
   fontstring:SetAllPoints(rlRaiderListFrame)
   if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
     print("Font not valid")
   end
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
-  fontstring:SetText("Raider list")
+  fontstring:SetText("Raider list")]]
   
   -- Create frame for each raid spot
   for i=1, 8 do -- 8 groups of 5 slots
@@ -980,7 +1093,7 @@ function iwtb:OnEnable()
       fontstring:SetPoint("BOTTOM", 0, 0)
       fontstring:SetPoint("LEFT", fontstring:GetParent():GetHeight() + 4, 0)
       fontstring:SetPoint("RIGHT", -fontstring:GetParent():GetHeight() - 4, 0)]]
-      fontstring:SetPoint("CENTER")
+      fontstring:SetPoint("TOP")
       fontstring:SetJustifyH("CENTER")
       fontstring:SetJustifyV("CENTER")
       local font_valid = fontstring:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
@@ -1015,10 +1128,10 @@ function iwtb:OnEnable()
         local targetgroup, targetmember = MemberFrameContainsPoint(mousex, mousey);
         if targetgroup then
           --local sourcegroup, sourcemember = RSUM_GetGroupMemberByFrame(s)
-          print("tgrp: " .. targetgroup .. " sbut: " .. s:GetName())
+          --print("tgrp: " .. targetgroup .. " sbut: " .. s:GetName())
           
           if targetmember then
-            print("slot: " .. targetmember)
+            --print("slot: " .. targetmember)
             --[[if ns.gm.Member(targetgroup, targetmember) == nil then
               --ns.gm.Move(sourcegroup, sourcemember, targetgroup);
             else
@@ -1032,7 +1145,7 @@ function iwtb:OnEnable()
           --print(string.sub(s:GetName(), -3, -3))
           
           if targetgroup ~= sourceGroup then
-            print("redraw source")
+            --print("redraw source")
             redrawGroup(targetgroup)
           end
           
@@ -1045,9 +1158,29 @@ function iwtb:OnEnable()
       end);
 
       grpMemSlotFrame[i][n]:SetScript("OnClick", function(s)
-        print(s:GetName())
+        --print(s:GetName())
         s.nameText:SetText("click me!")
       end);
+      
+      -- desire label
+      grpMemSlotFrame[i][n].desireTag = CreateFrame("Frame", "iwtbgrpslotdesire" .. i .. "-" .. n, grpMemSlotFrame[i][n])
+      grpMemSlotFrame[i][n].desireTag:SetWidth(GUIgrpSlotSizeX - 4)
+      grpMemSlotFrame[i][n].desireTag:SetHeight(GUIgrpSlotSizeY /2)
+      grpMemSlotFrame[i][n].desireTag:ClearAllPoints()
+      grpMemSlotFrame[i][n].desireTag:SetPoint("BOTTOM", 0, 0)
+      
+      local texture = grpMemSlotFrame[i][n].desireTag:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
+      grpMemSlotFrame[i][n].desireTag.text = grpMemSlotFrame[i][n].desireTag:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
+      texture:SetAllPoints(texture:GetParent())
+      texture:SetColorTexture(0,0,0.2,1)
+      grpMemSlotFrame[i][n].desireTag.text:SetPoint("CENTER")
+      grpMemSlotFrame[i][n].desireTag.text:SetJustifyH("CENTER")
+      grpMemSlotFrame[i][n].desireTag.text:SetJustifyV("BOTTOM")
+      local font_valid = grpMemSlotFrame[i][n].desireTag.text:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
+      if not font_valid then
+        print("Font not valid")
+      end
+      grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
       
       --[[local texture = groupmemberframes[group][member]:CreateTexture("rsumgroup" .. group .. "memberwindowtexture" .. member);
       local fontstring = groupmemberframes[group][member]:CreateFontString("rsumgroup" .. group .. "memberwindowstring" .. member);
@@ -1169,6 +1302,9 @@ function iwtb:OnEnable()
   rlTab:Hide()  -- Hide all other pages (in this case only one).
   
   --windowframe:Hide()
+  
+  -- Register listening events
+  iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", raidUpdate)
 end
 
 function iwtb:OnDisable()
