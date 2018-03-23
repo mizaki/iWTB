@@ -1232,11 +1232,17 @@ function iwtb:OnEnable()
   raiderSendButton:Enable()
   raiderSendButton:RegisterForClicks("LeftButtonUp")
   raiderSendButton:SetScript("OnClick", function(s)
+    function iwtb:coolDownSend()
+      s:Enable()
+    end
     -- Send current desire list (to raid?)
     --local mydata = iwtb.encodeData("hash", raiderDB.char.bosses)
     --print("Hash: " .. raiderDB.char.bossListHash)
-    -- TODO - Add CD timer. 30 secs?
+    -- CD timer. 15 secs
+    self:ScheduleTimer("coolDownSend", 15)
     iwtb.sendData("udata", raiderDB.char, "raid")
+    s:Disable()
+
     --iwtb.sendData("rhash", "0123456789", "raid") -- junk hash for testing
   end)
   
