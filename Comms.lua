@@ -140,7 +140,7 @@ local function xferData(prefix, text, distribution, sender)
   
   -- Do some check if we care about data. Requires promoted? In raid? Have an option to ignore all data?
   
-  print("Received update - "  .. sender)
+  --print("Received update - "  .. sender)
   local success, data = iwtb.decodeData(text)
   
   --[[if not(success) then
@@ -149,11 +149,13 @@ local function xferData(prefix, text, distribution, sender)
   
   if data.commSpec == nil or data.commSpec < commSpec then
     --tinsert(sessionBlacklist, sender)
-    print("Old comm spec: " .. sender)
+    --print("Old comm spec: " .. sender)
+    iwtb.setStatusText("raidleader", "Older comm spec: " .. sender)
     return
   elseif data.commSpec > commSpec then
     --if not(gottenUpdateMessage) then
-      print("Newer comm spec: " .. sender)
+      --print("Newer comm spec: " .. sender)
+      iwtb.setStatusText("raidleader", "Newer comm spec: " .. sender)
       --gottenUpdateMessage = true
     --end
     return
@@ -163,6 +165,7 @@ local function xferData(prefix, text, distribution, sender)
     dbRLRaiderCheck(sender)
     iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
     iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
+    iwtb.setStatusText("raidleader", "Received update - " .. sender)
     --print(iwtb.hashData(data.expac))
     --print_table(data.expac)
     --print(data)
@@ -179,7 +182,7 @@ local function requestData(prefix, text, distribution, sender)
     --return
   --end
   
-  print("Received update - " .. prefix .. " from " .. sender)
+  --print("Received update - " .. prefix .. " from " .. sender)
   local success, data = iwtb.decodeData(text)
   
   --[[if not(success) then
@@ -199,7 +202,7 @@ local function requestData(prefix, text, distribution, sender)
   else
     --data.commSpec = nil
   end
-  
+  --iwtb.setStatusText("raidleader","Received update - " .. prefix .. " from " .. sender)
   -- Update local data
   --BossList.MergeData(table, sender)
 end

@@ -14,7 +14,7 @@ local tierRLRaidInstances = nil
 local instanceBosses = nil -- Bosses for RL tab dropdown
 local frame
 local windowframe -- main frame
-local raiderFrame -- raider tab frame
+local raiderTab -- raider tab frame
 local rlTab -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
@@ -51,6 +51,8 @@ local GUIgrpSizeX = 580
 local GUIgrpSizeY = 50
 local GUIgrpSlotSizeX = 110
 local GUIgrpSlotSizeY = 45
+local GUIRStatusSizeX = 300 
+local GUIRStatusSizeY = 15
   
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
 
@@ -547,6 +549,14 @@ local function raidUpdate(self)
     end
   end
   --print_table(raidMembers)
+end
+
+function iwtb.setStatusText(f, text)
+  if f == "raider" then
+    raiderTab.raiderStatusPanel.text:SetText(text)
+  elseif f == "raidleader" then
+    rlTab.rlStatusPanel.text:SetText(text)
+  end
 end
 
 local function removeRaiderData(f, name)
@@ -1187,7 +1197,7 @@ function iwtb:OnEnable()
   
   
   -- Raider tab
-  local raiderTab = CreateFrame("Frame", "iwtbraidertab", windowframe)
+  raiderTab = CreateFrame("Frame", "iwtbraidertab", windowframe)
   raiderTab:SetWidth(GUItabWindowSizeX)
   raiderTab:SetHeight(GUItabWindowSizeY)
   raiderTab:SetPoint("CENTER", 0, -20)
@@ -1202,6 +1212,25 @@ function iwtb:OnEnable()
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Raider")]]
+  
+  -- Raider status text panel
+  local raiderStatusPanel = CreateFrame("Frame", "iwtbraiderstatuspanel", raiderTab)
+  raiderStatusPanel:SetWidth(GUIRStatusSizeX)
+  raiderStatusPanel:SetHeight(GUIRStatusSizeY)
+  raiderStatusPanel:SetPoint("TOPRIGHT", -50, 20)
+  texture = raiderStatusPanel:CreateTexture("iwtbrstatusptex")
+  texture:SetAllPoints(raiderStatusPanel)
+  texture:SetColorTexture(0.2,0,0,1)
+  fontstring = raiderStatusPanel:CreateFontString("iwtbrstatusptext")
+  fontstring:SetAllPoints(raiderStatusPanel)
+  if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 10, "") then
+    print("Font not valid")
+  end
+  fontstring:SetJustifyH("CENTER")
+  fontstring:SetJustifyV("CENTER")
+  fontstring:SetText("Raider status")
+  raiderStatusPanel.text = fontstring
+  raiderTab.raiderStatusPanel = raiderStatusPanel
   
   -- made local at start because dropdown menu function uses it
   raiderBossListFrame = CreateFrame("Frame", "iwtbraiderbosslist", raiderTab)
@@ -1242,7 +1271,7 @@ function iwtb:OnEnable()
     self:ScheduleTimer("coolDownSend", 15)
     iwtb.sendData("udata", raiderDB.char, "raid")
     s:Disable()
-
+    iwtb.setStatusText("raider", "Sent data to raid")
     --iwtb.sendData("rhash", "0123456789", "raid") -- junk hash for testing
   end)
   
@@ -1283,7 +1312,9 @@ function iwtb:OnEnable()
     raiderDB:ResetDB()
   end)
   
+  --------------------
   -- Raider leader tab
+  --------------------
   rlTab = CreateFrame("Frame", "iwtbraidleadertab", windowframe)
   rlTab:SetWidth(GUItabWindowSizeX)
   rlTab:SetHeight(GUItabWindowSizeY)
@@ -1299,6 +1330,25 @@ function iwtb:OnEnable()
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Raid Leader")
+  
+  -- Raider status text panel
+  local rlStatusPanel = CreateFrame("Frame", "iwtbrlstatuspanel", rlTab)
+  rlStatusPanel:SetWidth(GUIRStatusSizeX)
+  rlStatusPanel:SetHeight(GUIRStatusSizeY)
+  rlStatusPanel:SetPoint("TOPRIGHT", -50, 20)
+  texture = rlStatusPanel:CreateTexture("iwtbrlstatusptex")
+  texture:SetAllPoints(rlStatusPanel)
+  texture:SetColorTexture(0.2,0,0,1)
+  fontstring = rlStatusPanel:CreateFontString("iwtbrlstatusptext")
+  fontstring:SetAllPoints(rlStatusPanel)
+  if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 10, "") then
+    print("Font not valid")
+  end
+  fontstring:SetJustifyH("CENTER")
+  fontstring:SetJustifyV("CENTER")
+  fontstring:SetText("Raid leader status")
+  rlStatusPanel.text = fontstring
+  rlTab.rlStatusPanel = rlStatusPanel
   
   -- Raid Leader reset DB button
   local rlResetDBButton = CreateFrame("Button", "iwtbrlresetdbbutton", rlTab, "UIPanelButtonTemplate")
