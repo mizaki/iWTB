@@ -22,8 +22,18 @@ REQUEST_DATA = "IWTB_REQ_DATA"
 --UPDATE_HASH = "IWTB_UPDATE_HASH"
 XFER_DATA = "IWTB_XFER_DATA"
 
-iwtb.encodeData = function (rType, data)
-  -- rType (not the game!) is if we return just the HASH or the full compressed/hashed data
+iwtb.hashData = function (data)
+  local serData = Serializer:Serialize(data)
+      
+  local hash = Compressor:fcs32init()
+  hash = Compressor:fcs32update(hash, serData)
+  hash = Compressor:fcs32final(hash)
+  hash = string.format("%010s", tostring(hash)) -- Pad the hash
+  
+  return hash
+end
+
+iwtb.encodeData = function (data)
   --data.commSpec = commSpec
   local serData = Serializer:Serialize(data)
       
@@ -32,19 +42,13 @@ iwtb.encodeData = function (rType, data)
   hash = Compressor:fcs32final(hash)
   hash = string.format("%010s", tostring(hash)) -- Pad the hash
   
-  if rType == "hash" then
-    -- Just the hash (man)
-    return hash
-  else
-    -- Do the full beans
-    -- Compressing the hash?
-    serData = serData .. hash
-    
-    local compData = Compressor:CompressHuffman(serData)
-    local encData = Encoder:Encode(compData)
-    
-    return encData
-  end
+  -- Compressing the hash?
+  serData = serData .. hash
+  
+  local compData = Compressor:CompressHuffman(serData)
+  local encData = Encoder:Encode(compData)
+  
+  return encData
 end
 
 iwtb.decodeData = function (text)
@@ -84,7 +88,7 @@ end
 -- Send data
 iwtb.sendData = function (prefix, data, target) 
   --data.commSpec = commSpec
-  local data = data
+  local odata = data
   --local outdata
   local sType
   
@@ -94,19 +98,19 @@ iwtb.sendData = function (prefix, data, target)
     sType = XFER_HASH
   elseif prefix == "udata" then
     sType = XFER_DATA
-    data.commSpec = commSpec
-    data = iwtb.encodeData("data", data)
+    odata.commSpec = commSpec
+    odata = iwtb.encodeData(odata)
   elseif prefix == "rdata" then
     sType = REQUEST_DATA
   end
   
   -- Targets are /w, raid (and guild?)
   if target == "raid" then
-    AceComm:SendCommMessage(sType, data, "RAID")
+    AceComm:SendCommMessage(sType, odata, "RAID")
   elseif target == "guild" then
-    AceComm:SendCommMessage(sType, data, "GUILD")
+    AceComm:SendCommMessage(sType, odata, "GUILD")
   elseif target ~= "" then -- Presume target is char name
-    AceComm:SendCommMessage(sType, data, "WHISPER", target)
+    AceComm:SendCommMessage(sType, odata, "WHISPER", target)
   end
   
 end
@@ -158,9 +162,11 @@ local function xferData(prefix, text, distribution, sender)
     --print_table(data.expac)
     dbRLRaiderCheck(sender)
     iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
-    iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.encodeData("hash", data.expac)
-    
-    --print_table(iwtb.raidLeaderDB.char)
+    iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
+    --print(iwtb.hashData(data.expac))
+    --print_table(data.expac)
+    --print(data)
+    --print("RLDB: " .. iwtb.raidLeaderDB.char.raiders[sender].bossListHash)
   end
   
   -- Update local data
@@ -220,11 +226,14 @@ end]]
 
 -- RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
 local function xferHash(prefix, text, distribution, sender)
-  print("Request hash - " .. sender .. " Dist: " .. distribution)
+  --print("Request hash - " .. sender .. " Dist: " .. distribution)
   dbRLRaiderCheck(sender)
   print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.raidLeaderDB.char.raiders[sender].bossListHash))
   
+  -- Temp statement for testing
   if text ~= iwtb.raidLeaderDB.char.raiders[sender].bossListHash then
+  -- Final statement if RL sends (may change)
+  --if text ~= iwtb.raiderDB.char.bossListHash then
     -- Send current boss list
     print("Boss list hash mismatch - sending updated data")
     iwtb.sendData("udata", iwtb.raiderDB.char, sender)
