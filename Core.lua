@@ -15,7 +15,7 @@ local instanceBosses = nil -- Bosses for RL tab dropdown
 local frame
 local windowframe -- main frame
 local raiderFrame -- raider tab frame
-local rlMainFrame -- raid leader tab frame
+local rlTab -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
 local rlRaiderListFrame -- main frame listing raiders spots
@@ -423,58 +423,6 @@ local function drawOoR(ooRraiders)
       i = i +1
     end
   end
-  
-  
-  --[[local function drawSlot(n)
-    local slotx = (GUIgrpSlotSizeX +5) * (n -1)
-    --local sloty = (GUIgrpSlotSizeY * i) + 5
-    grpMemSlotFrame[i][n] = CreateFrame("Button", "iwtbgrpslot" .. i .. "-" .. n, grpMemFrame[i])
-    grpMemSlotFrame[i][n]:SetWidth(GUIgrpSlotSizeX)
-    grpMemSlotFrame[i][n]:SetHeight(GUIgrpSlotSizeY/2)
-    grpMemSlotFrame[i][n]:ClearAllPoints()
-    grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
-    
-    local texture = grpMemSlotFrame[i][n]:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
-    local fontstring = grpMemSlotFrame[i][n]:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
-    texture:SetAllPoints(texture:GetParent())
-    texture:SetColorTexture(0,0,0,1)
-    fontstring:SetPoint("TOP", 0, -5)
-    fontstring:SetJustifyH("CENTER")
-    fontstring:SetJustifyV("CENTER")
-    local font_valid = fontstring:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-    if not font_valid then
-      print("Font not valid")
-    end
-    fontstring:SetText("Raider " .. i .. " - " .. n)
-
-    grpMemSlotFrame[i][n].nameText = fontstring
-    
-    grpMemSlotFrame[i][n]:SetScript("OnClick", function(s)
-      --print(s:GetName())
-      s.nameText:SetText("click me!")
-    end)
-    
-    -- desire label
-    grpMemSlotFrame[i][n].desireTag = CreateFrame("Frame", "iwtbgrpslotdesire" .. i .. "-" .. n, grpMemSlotFrame[i][n])
-    grpMemSlotFrame[i][n].desireTag:SetWidth(GUIgrpSlotSizeX - 4)
-    grpMemSlotFrame[i][n].desireTag:SetHeight(GUIgrpSlotSizeY /2)
-    grpMemSlotFrame[i][n].desireTag:ClearAllPoints()
-    grpMemSlotFrame[i][n].desireTag:SetPoint("BOTTOM", 0, 0)
-    
-    local texture = grpMemSlotFrame[i][n].desireTag:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
-    grpMemSlotFrame[i][n].desireTag.text = grpMemSlotFrame[i][n].desireTag:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
-    texture:SetAllPoints(texture:GetParent())
-    texture:SetColorTexture(0,0,0.2,1)
-    grpMemSlotFrame[i][n].desireTag.text:SetPoint("CENTER")
-    grpMemSlotFrame[i][n].desireTag.text:SetJustifyH("CENTER")
-    grpMemSlotFrame[i][n].desireTag.text:SetJustifyV("BOTTOM")
-    local font_valid = grpMemSlotFrame[i][n].desireTag.text:SetFont("Fonts\\FRIZQT__.TTF", 10, "")
-    if not font_valid then
-      print("Font not valid")
-    end
-    grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
-      
-  end]]
 end
 
 local function redrawGroup(grp)
@@ -530,7 +478,7 @@ end
 
 local function raidUpdate(self)
   -- Only update if frame is visible
-  --if not rlMainFrame:IsShown() then return end
+  if not rlTab:IsShown() then return end
   
   local i = 1
   local raidMembers = {}
@@ -1330,7 +1278,7 @@ function iwtb:OnEnable()
   end)
   
   -- Raider leader tab
-  local rlTab = CreateFrame("Frame", "iwtbraidleadertab", windowframe)
+  rlTab = CreateFrame("Frame", "iwtbraidleadertab", windowframe)
   rlTab:SetWidth(GUItabWindowSizeX)
   rlTab:SetHeight(GUItabWindowSizeY)
   rlTab:SetPoint("CENTER", 0, -20)
