@@ -343,6 +343,15 @@ local function slotIsEmpty(f)
   if f:GetParent().nameText:GetText() == L["Empty"] then return true else return false end
 end
 
+local function grpHasEmpty(grp)
+  for i=1, 5 do
+    if slotIsEmpty(grpMemSlotFrame[grp][i]) then
+      return true
+    end
+  end
+  return false
+end
+
 -- Add/draw Out of Raid slot for raider entry.
 local function drawOoR(ooRraiders)
   -- Find number of current slots
@@ -1363,7 +1372,7 @@ function iwtb:OnEnable()
   raiderTestButton:SetScript("OnClick", function(s)
     print_table(raidLeaderDB:GetProfiles())
   end)
-  
+  raiderTestButton:Hide()
   
   -- Raider reset DB button
   local raiderResetDBButton = CreateFrame("Button", "iwtbraiderresetdbbutton", raiderTab, "UIPanelButtonTemplate")
@@ -1562,10 +1571,17 @@ function iwtb:OnEnable()
         local targetgroup, targetmember = MemberFrameContainsPoint(mousex, mousey);
         if targetgroup then
           --local sourcegroup, sourcemember = RSUM_GetGroupMemberByFrame(s)
-          --print("tgrp: " .. targetgroup .. " sbut: " .. s:GetName())
+          print("tgrp: " .. targetgroup .. " sbut: " .. s:GetName() .. " raiderid: " .. s:GetAttribute("raidid"))
           
           if targetmember then
-            --print("slot: " .. targetmember)
+            print("slot: " .. targetmember)
+            if grpHasEmpty then
+              -- Move to targetgroup
+              print("Would move: " .. s.nameText:GetText() .. " with raidid: " .. s:GetAttribute("raidid") .. " to group: " .. targetgroup)
+            else
+              -- Swap with targetmember
+              print("Would swap: " .. s.nameText:GetText() .. "with raidid: " .. s:GetAttribute("raidid") .. " with: " .. grpMemSlotFrame[targetgroup][targetmember]:GetName() .. " raidid: " .. grpMemSlotFrame[targetgroup][targetmember]:GetAttribute("raidid"))
+            end
             --[[if ns.gm.Member(targetgroup, targetmember) == nil then
               --ns.gm.Move(sourcegroup, sourcemember, targetgroup);
             else
