@@ -338,18 +338,24 @@ end
 
 local function slotIsEmpty(f)
   --print(f:GetParent().nameText:GetText())
-  --print_table(f)
+  --print_table(getmetatable(f.nameText))
   --name = f.nameText:GetText()
-  if f:GetParent().nameText:GetText() == L["Empty"] then return true else return false end
+  --print_table(getmetatable(f.nameText))
+  if f.nameText then
+  if f.nameText:GetText() == L["Empty"] then return true else return false end
+  end
 end
 
 local function grpHasEmpty(grp)
+  local result = false
   for i=1, 5 do
     if slotIsEmpty(grpMemSlotFrame[grp][i]) then
-      return true
+      result = true
+      break
     end
   end
-  return false
+  print(result)
+  return result
 end
 
 -- Add/draw Out of Raid slot for raider entry.
@@ -1575,12 +1581,14 @@ function iwtb:OnEnable()
           
           if targetmember then
             print("slot: " .. targetmember)
-            if grpHasEmpty then
+            if grpHasEmpty(targetgroup) then
               -- Move to targetgroup
-              print("Would move: " .. s.nameText:GetText() .. " with raidid: " .. s:GetAttribute("raidid") .. " to group: " .. targetgroup)
+              --print("Would move: " .. s.nameText:GetText() .. " with raidid: " .. s:GetAttribute("raidid") .. " to group: " .. targetgroup)
+              SetRaidSubgroup(s:GetAttribute("raidid"), targetgroup)
             else
               -- Swap with targetmember
-              print("Would swap: " .. s.nameText:GetText() .. "with raidid: " .. s:GetAttribute("raidid") .. " with: " .. grpMemSlotFrame[targetgroup][targetmember]:GetName() .. " raidid: " .. grpMemSlotFrame[targetgroup][targetmember]:GetAttribute("raidid"))
+              --print("Would swap: " .. s.nameText:GetText() .. "with raidid: " .. s:GetAttribute("raidid") .. " with: " .. grpMemSlotFrame[targetgroup][targetmember]:GetName() .. " raidid: " .. grpMemSlotFrame[targetgroup][targetmember]:GetAttribute("raidid"))
+              SwapRaidSubgroup(s:GetAttribute("raidid"), grpMemSlotFrame[targetgroup][targetmember]:GetAttribute("raidid"))
             end
             --[[if ns.gm.Member(targetgroup, targetmember) == nil then
               --ns.gm.Move(sourcegroup, sourcemember, targetgroup);
