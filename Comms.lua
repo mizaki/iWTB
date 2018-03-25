@@ -3,6 +3,7 @@ local AceComm = LibStub("AceComm-3.0")
 local Serializer = LibStub("AceSerializer-3.0")
 local Compressor = LibStub("LibCompress")
 local Encoder = Compressor:GetAddonEncodeTable()
+local L = iwtb.L
 
 local commSpec = 1 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
 
@@ -165,7 +166,7 @@ local function xferData(prefix, text, distribution, sender)
     dbRLRaiderCheck(sender)
     iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
     iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
-    iwtb.setStatusText("raidleader", "Received update - " .. sender)
+    iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
     --print(iwtb.hashData(data.expac))
     --print_table(data.expac)
     --print(data)
