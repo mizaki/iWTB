@@ -836,7 +836,8 @@ function iwtb:OnEnable()
         -- Create a frame for each boss with a desire dropdown.
           local i = 1
           local newColOn = 7
-          local bheight, bwidth = 50, 350
+          local bheight, bwidth = 50, 365
+          bwidth = (GUItabWindowSizeX - 50) /2
           for id, bossid in pairs(bossList.order) do
             local y = -(bheight + 20) * i
             if i > newColOn then y = -(bheight + 20) * (i - newColOn) end
@@ -911,6 +912,33 @@ function iwtb:OnEnable()
             fontstring:SetJustifyH("LEFT")
             fontstring:SetJustifyV("MIDDLE")
             fontstring:SetText(bossList.bosses[bossid])
+            
+            -- Create a loot button to link to journel entry
+            bossFrame[idofboss].loot = CreateFrame("Button", "iwtblootbut", bossFrame[idofboss])
+            bossFrame[idofboss].loot:SetWidth(48/1.5)
+            bossFrame[idofboss].loot:SetHeight(43/1.5)
+            bossFrame[idofboss].loot:SetPoint("RIGHT", -135, 0)
+            
+            texture = bossFrame[idofboss].loot:CreateTexture("iwtblootbuttex")
+            texture:SetAllPoints(texture:GetParent())
+            texture:SetTexture("Interface\\EncounterJournal\\UI-EncounterJournalTextures")
+            --texture:SetTexCoord(0.63281250, 0.72656250, 0.61816406, 0.66015625) -- highlighted
+            texture:SetTexCoord(0.73046875, 0.82421875, 0.61816406, 0.66015625)
+            
+            bossFrame[idofboss].loot.texture = texture
+            
+            bossFrame[idofboss].loot:RegisterForClicks("LeftButtonUp")
+            bossFrame[idofboss].loot:SetScript("OnEnter", function(s) bossFrame[idofboss].loot.texture:SetTexCoord(0.63281250, 0.72656250, 0.61816406, 0.66015625) end)
+            bossFrame[idofboss].loot:SetScript("OnLeave", function(s) bossFrame[idofboss].loot.texture:SetTexCoord(0.73046875, 0.82421875, 0.61816406, 0.66015625) end)
+            bossFrame[idofboss].loot:SetScript("OnClick", function(s)
+              -- Horrible fudge because I can't figure out how to go to the loot panel...
+              EJ_SelectInstance(arg1)
+              EJ_SelectEncounter(bossid)
+              local itemID = EJ_GetLootInfoByIndex(1) -- Get the first item for the boss
+              
+              EncounterJournal_OpenJournal(16, arg1, bossid, nil, nil, itemID)
+            end)
+            
             
             --add dropdown menu for need/minor/os etc.
             local bossWantdropdown = CreateFrame("Frame", "bossWantdropdown" .. bossid, bossFrame[idofboss], "L_UIDropDownMenuTemplate")
