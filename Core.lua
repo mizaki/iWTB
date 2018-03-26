@@ -1261,6 +1261,7 @@ function iwtb:OnEnable()
   windowframe:SetPoint("CENTER", 0, 0)
   windowframe:SetFrameStrata("DIALOG")
   windowframe:SetMovable(true)
+  --tinsert(UISpecialFrames,"iwtbwindow")
 
   windowframetexture = windowframe:CreateTexture("iwtbframetexture")
   windowframetexture:SetAllPoints(windowframetexture:GetParent())
@@ -1295,7 +1296,7 @@ function iwtb:OnEnable()
   fontstring:SetText("iWTB - I Want That Boss!")
   windowframe.title = title
   
-  button = CreateFrame("Button", "iwtbexit", windowframe, "UIPanelCloseButton")
+  button = CreateFrame("Button", "iwtbexit", title, "UIPanelCloseButton")
   button:SetWidth(40)
   button:SetHeight(40)
   button:SetPoint("CENTER", button:GetParent(), "TOPRIGHT", 0, 0)
@@ -1838,10 +1839,14 @@ function iwtb:OnEnable()
   raiderTab:Show()  -- Show page 1.
   rlTab:Hide()  -- Hide all other pages (in this case only one).
   
+  -- Hide on esc
+  --tinsert(UISpecialFrames,"iwtbwindow")
+  --tinsert(UISpecialFrames,"iwtbtitle")
+  
   -- Hide or show main window on start via options
   if not db.char.showOnStart then
-    windowframe.title:Hide()
     windowframe:Hide()
+    windowframe.title:Hide()
   end
   
   -- Trying to set the dropdowns programmatically. Allow this via options?
