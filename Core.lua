@@ -1410,6 +1410,19 @@ function iwtb:OnEnable()
   raiderTestButton:Hide()
   
   -- Raider reset DB button
+  StaticPopupDialogs["IWTB_ResetRaiderDB"] = {
+    text = L["Remove selected desire from ALL bosses?"],
+    button1 = "Yes",
+    button2 = "No",
+    OnAccept = function()
+        raiderDB:ResetDB()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,  -- avoid some UI taint, see http://www.wowace.com/announcements/how-to-avoid-some-ui-taint/
+  }
+  
   local raiderResetDBButton = CreateFrame("Button", "iwtbraiderresetdbbutton", raiderTab, "UIPanelButtonTemplate")
   raiderResetDBButton:SetWidth(GUItabButtonSizeX)
   raiderResetDBButton:SetHeight(GUItabButtonSizeY)
@@ -1421,7 +1434,7 @@ function iwtb:OnEnable()
   raiderResetDBButton:Enable()
   raiderResetDBButton:RegisterForClicks("LeftButtonUp")
   raiderResetDBButton:SetScript("OnClick", function(s)
-    raiderDB:ResetDB()
+    StaticPopup_Show("IWTB_ResetRaiderDB")
   end)
   
   --------------------
@@ -1493,6 +1506,19 @@ function iwtb:OnEnable()
   rlTab.rlStatusPanel.content = rlStatusPanelContent
   
   -- Raid Leader reset DB button
+  StaticPopupDialogs["IWTB_ResetRaidLeaderDB"] = {
+    text = L["Remove ALL raiders desire data?"],
+    button1 = "Yes",
+    button2 = "No",
+    OnAccept = function()
+        raidLeaderDB:ResetDB()
+    end,
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,  -- avoid some UI taint, see http://www.wowace.com/announcements/how-to-avoid-some-ui-taint/
+  }
+  
   local rlResetDBButton = CreateFrame("Button", "iwtbrlresetdbbutton", rlTab, "UIPanelButtonTemplate")
   rlResetDBButton:SetWidth(GUItabButtonSizeX)
   rlResetDBButton:SetHeight(GUItabButtonSizeY)
@@ -1504,7 +1530,7 @@ function iwtb:OnEnable()
   rlResetDBButton:Enable()
   rlResetDBButton:RegisterForClicks("LeftButtonUp")
   rlResetDBButton:SetScript("OnClick", function(s)
-    raidLeaderDB:ResetDB()
+    StaticPopup_Show("IWTB_ResetRaidLeaderDB")
   end)
   
   -- Raid Leader test button

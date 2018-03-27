@@ -4,6 +4,7 @@ print("Loading enGB")
 
 local L = LibStub("AceLocale-3.0"):NewLocale("iWTB", "enGB", true)
 
+-- General
 L["Raider"] = true
 L["Raid Leader"] = true
 L["Expansion"] = true
@@ -23,10 +24,10 @@ L["Minor"] = true
 L["Off spec"] = true
 L["No need"] = true
 L["No data"] = true
-L["Received update - "] = true
-L["Removed data - "] = true
-L["Sent data to raid group"] = true
-L["Need to be in a raid group"] = true
+L["Remove data"] = true
+L["Remove"] = true
+
+-- Options
 L["Request an update from a player when they join the raid"] = true
 L["Show on start"] = true
 L["Show on addon when UI loads"] = true
@@ -37,5 +38,13 @@ L["Sync only these guild ranks:"] = true
 L["Sync with only players of a certain guild rank"] = true
 L["Copy desire data"] = true
 L["Copy desire data from one character to another"] = true
-L["Remove data"] = true
-L["Remove"] = true
+
+-- Status messages
+L["Received update - "] = true
+L["Removed data - "] = true
+L["Sent data to raid group"] = true
+L["Need to be in a raid group"] = true
+
+-- Confirmation boxes
+L["Remove selected desire from ALL bosses?"] = true
+L["Remove ALL raiders desire data?"] = true
