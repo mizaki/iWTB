@@ -814,18 +814,19 @@ function iwtb:OnEnable()
       getInstances(arg1)
       raiderSelectedTier.expacid = arg1
       
-      -- Horrible fudge to enable selecting dropdowns programmatically
-      if self:GetName() ~= "expacbuttonButton" then L_UIDropDownMenu_SetText(expacButton, self:GetText()) end
+      -- To enable selecting dropdowns programmatically
+      L_UIDropDownMenu_SetText(expacButton, expacInfo[arg1])
+
       dbSchemaCheck("expacs")
       
     elseif arg2 == "expacrlbutton" then
       -- fill in raids with arg1 as expac id
       getInstances(arg1, true)
       rlSelectedTier.expacid = arg1
-      if self:GetName() ~= "expacrlbuttonButton" then L_UIDropDownMenu_SetText(expacRLButton, self:GetText()) end
+      L_UIDropDownMenu_SetText(expacRLButton, expacInfo[arg1])
       
     elseif arg2 == "instancebutton" then
-    if self:GetName() ~= "instancebuttonButton" then L_UIDropDownMenu_SetText(instanceButton, self:GetText()) end
+    L_UIDropDownMenu_SetText(instanceButton, tierRaidInstances.raids[arg1])
     raiderSelectedTier.instid = arg1
     dbSchemaCheck("inst", raiderSelectedTier.expacid)
       -- Generate boss frames within raiderBossListFrame
@@ -1025,7 +1026,7 @@ function iwtb:OnEnable()
       end
       
     elseif arg2 == "instancerlbutton" then
-      if self:GetName() ~= "instancerlbuttonButton" then L_UIDropDownMenu_SetText(instanceRLButton, self:GetText()) end
+      L_UIDropDownMenu_SetText(instanceRLButton, tierRLRaidInstances.raids[arg1])
       rlSelectedTier.instid = arg1
       -- get the boss list
       getBosses(arg1, true)
