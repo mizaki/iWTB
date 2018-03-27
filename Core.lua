@@ -1349,7 +1349,7 @@ function iwtb:OnEnable()
   raiderBossListFrame:SetPoint("CENTER", 0, 0)
   texture = raiderBossListFrame:CreateTexture("iwtbraiderbosslisttex")
   texture:SetAllPoints(raiderBossListFrame)
-  texture:SetColorTexture(0,0,0,1)
+  texture:SetColorTexture(0.1,0.1,0.1,0.5)
   --[[fontstring = raiderBossListFrame:CreateFontString("iwtbraidertesting")
   fontstring:SetAllPoints(raiderBossListFrame)
   if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
