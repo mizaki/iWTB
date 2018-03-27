@@ -514,7 +514,7 @@ local function raidUpdate(self)
     local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
     --print(GetRaidRosterInfo(i))
     if raidMembers[subgroup] == nil then raidMembers[subgroup] = {} end
-    tinsert(raidMembers[subgroup], { name= name, level = level, crole = combatRole, fileName = fileName, raidid = i, isDead = isDead}) -- level 0 == offline
+    tinsert(raidMembers[subgroup], { name= name, level = level, crole = combatRole, fileName = fileName, raidid = i, isDead = isDead, online = online }) -- level 0 == offline
     i = i +1
     if i > 40 then break end
   end
@@ -569,7 +569,11 @@ local function raidUpdate(self)
       --print("desireid: "  .. tostring(desireid))
       grpMemSlotFrame[subgrp][k]:SetAttribute("raidid", player.raidid) -- We can use this when changing player group
       grpMemSlotFrame[subgrp][k].nameText:SetText(player.name)
-      grpMemSlotFrame[subgrp][k].nameText:SetTextColor(textColour.r, textColour.g, textColour.b);
+      if player.online then
+        grpMemSlotFrame[subgrp][k].nameText:SetTextColor(textColour.r, textColour.g, textColour.b)
+      else
+        grpMemSlotFrame[subgrp][k].nameText:SetTextColor(0.8,0.8,0.8,0.7)
+      end
       grpMemSlotFrame[subgrp][k].roleTexture:SetTexCoord(roleTexCoords[player.crole].left, roleTexCoords[player.crole].right, roleTexCoords[player.crole].top, roleTexCoords[player.crole].bottom)
       grpMemSlotFrame[subgrp][k].roleTexture:Show()
       grpMemSlotFrame[subgrp][k].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
