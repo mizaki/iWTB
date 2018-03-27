@@ -843,7 +843,7 @@ function iwtb:OnEnable()
             if i > newColOn then y = -(bheight + 20) * (i - newColOn) end
             local x = 10
             if i > newColOn then x = x + (bwidth + 10) end
-            local idofboss = tostring(bossid)
+            local idofboss = tostring(bossid) -- bossFrame[i] i is created with string. Fix?
             --print("y: " .. y)
             --print("bossid: " .. idofboss .. " bossname: " .. bossname)
             bossFrame[idofboss] = CreateFrame("Frame", "iwtbboss" .. idofboss, raiderBossListFrame)
@@ -928,8 +928,8 @@ function iwtb:OnEnable()
             bossFrame[idofboss].loot.texture = texture
             
             bossFrame[idofboss].loot:RegisterForClicks("LeftButtonUp")
-            bossFrame[idofboss].loot:SetScript("OnEnter", function(s) bossFrame[idofboss].loot.texture:SetTexCoord(0.63281250, 0.72656250, 0.61816406, 0.66015625) end)
-            bossFrame[idofboss].loot:SetScript("OnLeave", function(s) bossFrame[idofboss].loot.texture:SetTexCoord(0.73046875, 0.82421875, 0.61816406, 0.66015625) end)
+            bossFrame[idofboss].loot:SetScript("OnEnter", function(s) s:GetParent().loot.texture:SetTexCoord(0.63281250, 0.72656250, 0.61816406, 0.66015625) end)
+            bossFrame[idofboss].loot:SetScript("OnLeave", function(s) s:GetParent().loot.texture:SetTexCoord(0.73046875, 0.82421875, 0.61816406, 0.66015625) end)
             bossFrame[idofboss].loot:SetScript("OnClick", function(s)
               -- Horrible fudge because I can't figure out how to go to the loot panel...
               EJ_SelectInstance(arg1)
@@ -992,13 +992,11 @@ function iwtb:OnEnable()
         end
         
         if haveList then
-          
           --print("We already have this list")
           -- Hide all boss frames
           for _, frame in ipairs(childFrames) do
             frame:Hide()
           end
-          
           -- Interate over bosses and show needed frames
           for bossid, bossname in pairs(bossList.bosses) do
             local sFrameName = "iwtbboss" .. tostring(bossid)
@@ -1011,13 +1009,11 @@ function iwtb:OnEnable()
             end
           end
         else
-
           -- Hide current
           for _, frame in ipairs(childFrames) do
             --print(frame:GetName())
             frame:Hide()
           end
-          
           -- Create a new list
           genBossFrames(bossList)
           
