@@ -874,11 +874,11 @@ function iwtb:OnEnable()
             end]]
             --print(bossImage)
             local creatureTex = creatureFrame:CreateTexture("iwtbcreaturetex" .. idofboss)
-            creatureTex:ClearAllPoints()
-            creatureTex:SetPoint("CENTER", -85, 5)
-            --creatureTex:SetPoint("LEFT", -20, 0)
+            --creatureTex:ClearAllPoints()
+            --creatureTex:SetAllPoints(creatureTex:GetParent())
+            --creatureTex:SetPoint("CENTER", -85, 5)
+            creatureTex:SetPoint("TOPLEFT", 60, 13)
             creatureTex:SetTexture(bossImage)
-            --creatureTex:SetAllPoints(creatureFrame)
             --creatureTex:SetColorTexture(0.4,0.2,0.9,0.7)
             
 
