@@ -220,7 +220,7 @@ local function getInstances(expacID, isRL)
       local isRaid = select(10,EJ_GetInstanceByIndex(i,true))
       local raidTitle = select(2,EJ_GetInstanceByIndex(i,true))
       
-      if isRaid then
+      if isRaid and instanceInfoID ~= 557 then -- Draenor is listed as a raid, it's not!
         if isRL then
             table.insert(tierRLRaidInstances.raids, instanceInfoID, raidTitle)
             table.insert(tierRLRaidInstances.order, raidCounter , instanceInfoID)
@@ -936,12 +936,23 @@ function iwtb:OnEnable()
             bossFrame[idofboss].loot:SetScript("OnEnter", function(s) s:GetParent().loot.texture:SetTexCoord(0.63281250, 0.72656250, 0.61816406, 0.66015625) end)
             bossFrame[idofboss].loot:SetScript("OnLeave", function(s) s:GetParent().loot.texture:SetTexCoord(0.73046875, 0.82421875, 0.61816406, 0.66015625) end)
             bossFrame[idofboss].loot:SetScript("OnClick", function(s)
-              -- Horrible fudge because I can't figure out how to go to the loot panel...
+              -- Horrible fudge because I can't figure out how to go to the loot panel without an itemID...
+              local difficulty = 16 -- Mythic
+              
+              -- Set to 10N for loot window
+              if raiderSelectedTier.expacid < 5 then
+                difficulty = 3
+                EJ_SetDifficulty(3)
+              elseif raiderSelectedTier.expacid == 5 and arg1 ~= 369 then
+                -- Do some BS because Blizz changed to mythic on Mist last raid.
+                difficulty = 3
+                EJ_SetDifficulty(3)
+              end
+              
               EJ_SelectInstance(arg1)
               EJ_SelectEncounter(bossid)
               local itemID = EJ_GetLootInfoByIndex(1) -- Get the first item for the boss
-              
-              EncounterJournal_OpenJournal(16, arg1, bossid, nil, nil, itemID)
+              EncounterJournal_OpenJournal(difficulty, arg1, bossid, nil, nil, itemID)
             end)
             
             
