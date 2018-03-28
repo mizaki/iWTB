@@ -1633,9 +1633,14 @@ function iwtb:OnEnable()
       grpMemSlotFrame[i][n]:EnableMouse(true);
       grpMemSlotFrame[i][n]:SetScript("OnDragStart", function(s, ...) s:StartMoving() s:SetFrameStrata("TOOLTIP") end);
       grpMemSlotFrame[i][n]:SetScript("OnDragStop", function(s, ...)
-        s:StopMovingOrSizing();
+        s:StopMovingOrSizing()
         --s:ClearAllPoints()
-        s:SetFrameStrata("FULLSCREEN");
+        s:SetFrameStrata("FULLSCREEN")
+        
+        if not IsInRaid() then
+          raidUpdate()
+          return
+        end
         
         local sourceGroup = tonumber(string.sub(s:GetName(), -3, -3))
         local mousex, mousey = GetCursorPosition();
