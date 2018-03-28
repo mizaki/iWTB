@@ -775,6 +775,7 @@ function iwtb:OnInitialize()
       else
         windowframe.title:Show()
         windowframe:Show()
+        raidUpdate()
       end
     else
       LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
@@ -1611,7 +1612,7 @@ function iwtb:OnEnable()
       local fontstring = grpMemSlotFrame[i][n]:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
       texture:SetAllPoints(texture:GetParent())
       texture:SetColorTexture(0,0,0,1)
-      fontstring:SetPoint("CENTER", 0, 5)
+      fontstring:SetPoint("CENTER", 0, 6)
       fontstring:SetWidth(GUIgrpSlotSizeX - 25)
       --fontstring:SetHeight(GUIgrpSizeY)
       fontstring:SetJustifyH("CENTER")
