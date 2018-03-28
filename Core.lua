@@ -24,7 +24,7 @@ local grpMemFrame = {} -- table containing each frame per group
 local grpMemSlotFrame = {} -- table containing each frame per slot for each group
 local rlRaiderNotListFrame -- main frame listing raiders NOT in the raid but in the rl db
 local rlOoRcontentSlots = {} -- Out of Raid slots
-local bossFrame -- table of frames containing each boss frame
+local bossFrame = {}-- table of frames containing each boss frame
 local raiderBossesStr = "" -- raider boss desire seralised
 local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
@@ -833,7 +833,7 @@ function iwtb:OnEnable()
       -- Generate boss frames within raiderBossListFrame
       local function genBossFrames(bossList)
         -- Empty boss list to create the bosses frames
-        bossFrame = {}
+        --bossFrame = {}
         
         --print("--- raiderDB.char.bosses ---")
         --printTable(raiderDB.char.bosses)
@@ -964,7 +964,7 @@ function iwtb:OnEnable()
             L_UIDropDownMenu_SetWidth(bossWantdropdown, 110) -- Use in place of dropDown:SetWidth
             -- Bind an initializer function to the dropdown; see previous sections for initializer function examples.
             L_UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
-            
+            bossFrame[idofboss].dropdown = bossWantdropdown
             -- Set text to current selection if there is one otherwise default msg
             -- Need to change bossid to a string as that's how the table is created. Maybe we should create as a number? Depends on later use and which one is less hassle.
             
@@ -1161,7 +1161,8 @@ function iwtb:OnEnable()
     --print("SerStr: " .. raiderBossesStr)
     
     -- Set dropdown text to new selection
-    L_UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
+    L_UIDropDownMenu_SetSelectedID(bossFrame[arg2].dropdown, self:GetID())
+    
     -- Update hash
     --print("Old hash: " .. raiderDB.char.bossListHash)
     raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.expac) -- Do we want to hash here? Better to do it before sending or on request?
