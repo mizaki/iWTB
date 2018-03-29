@@ -1638,6 +1638,7 @@ function iwtb:OnEnable()
         s:SetFrameStrata("FULLSCREEN")
         
         if not IsInRaid() then
+          iwtb.setStatusText("raidleader", L["Need to be in a raid group"])
           raidUpdate()
           return
         end
