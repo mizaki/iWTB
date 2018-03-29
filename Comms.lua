@@ -163,14 +163,18 @@ local function xferData(prefix, text, distribution, sender)
   else
     --print("Update data")
     --print_table(data.expac)
-    dbRLRaiderCheck(sender)
-    iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
-    iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
-    iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
-    --print(iwtb.hashData(data.expac))
-    --print_table(data.expac)
-    --print(data)
-    --print("RLDB: " .. iwtb.raidLeaderDB.char.raiders[sender].bossListHash)
+    if not iwtb.db.char.syncOnlyGuild or (iwtb.db.char.syncOnlyGuild and iwtb.isGuildMember(sender)) then
+      dbRLRaiderCheck(sender)
+      iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
+      iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
+      iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
+      --print(iwtb.hashData(data.expac))
+      --print_table(data.expac)
+      --print(data)
+      --print("RLDB: " .. iwtb.raidLeaderDB.char.raiders[sender].bossListHash)
+    else
+      iwtb.setStatusText("raidleader", L["Ignored non-guild member data - "] .. sender)
+    end
   end
   
   -- Update local data

@@ -358,6 +358,15 @@ local function grpHasEmpty(grp)
   return result
 end
 
+function iwtb.isGuildMember(name)
+  local _, onlineGmem = GetNumGuildMembers()
+  if not string.find(name, "-") then name = name .. "-" .. GetRealmName() end -- Append realm name if missing
+  for i=1, onlineGmem do
+    if GetGuildRosterInfo(i) == name then return true end
+  end
+  return false
+end
+
 -- Add/draw Out of Raid slot for raider entry.
 local function drawOoR(ooRraiders)
   -- Find number of current slots
@@ -1419,7 +1428,7 @@ function iwtb:OnEnable()
   raiderTestButton:Enable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
-    print_table(raidLeaderDB:GetProfiles())
+    print(iwtb.isGuildMember("Renyou-Shadowsong"))
   end)
   raiderTestButton:Hide()
   

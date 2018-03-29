@@ -44,6 +44,7 @@ L["Received update - "] = true
 L["Removed data - "] = true
 L["Sent data to raid group"] = true
 L["Need to be in a raid group"] = true
+L["Ignored non-guild member data - "] = true
 
 -- Confirmation boxes
 L["Remove selected desire from ALL bosses?"] = true
