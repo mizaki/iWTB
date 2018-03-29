@@ -603,9 +603,10 @@ function iwtb.setStatusText(f, text)
   
   if f == "raider" then
     raiderTab.raiderStatusPanel.text:SetText(text)
+    raiderTab.raiderStatusPanel.anim:Play()
   elseif f == "raidleader" then
     rlTab.rlStatusPanel.text:SetText(text) -- Set top to latest
-    
+    rlTab.rlStatusPanel.anim:Play()
     rlStatusContent = churnContent(rlStatusContent)
     for k,v in pairs(rlStatusContent) do
       rlTab.rlStatusPanel.content[k].text:SetText(v)
@@ -1365,8 +1366,17 @@ function iwtb:OnEnable()
   end
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
-  fontstring:SetText("Raider status")
+  --fontstring:SetText("Raider status")
   raiderStatusPanel.text = fontstring
+  
+  local rStatusAnim = fontstring:CreateAnimationGroup()
+  local rStatusAnim1 = rStatusAnim:CreateAnimation("Alpha")
+  rStatusAnim1:SetFromAlpha(0)
+  rStatusAnim1:SetToAlpha(1)
+  rStatusAnim1:SetDuration(1.5)
+  rStatusAnim1:SetSmoothing("OUT")
+  raiderStatusPanel.anim = rStatusAnim
+  
   raiderTab.raiderStatusPanel = raiderStatusPanel
   
   -- made local at start because dropdown menu function uses it
@@ -1428,7 +1438,7 @@ function iwtb:OnEnable()
   raiderTestButton:Enable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
-    print(iwtb.isGuildMember("Renyou-Shadowsong"))
+    iwtb.setStatusText("raider", "Testing")
   end)
   raiderTestButton:Hide()
   
@@ -1502,6 +1512,15 @@ function iwtb:OnEnable()
   fontstring:SetJustifyV("CENTER")
   --fontstring:SetText("Raid leader status")
   rlStatusPanel.text = fontstring
+  
+  local rlStatusAnim = fontstring:CreateAnimationGroup()
+  local rlStatusAnim1 = rlStatusAnim:CreateAnimation("Alpha")
+  rlStatusAnim1:SetFromAlpha(0)
+  rlStatusAnim1:SetToAlpha(1)
+  rlStatusAnim1:SetDuration(1.5)
+  rlStatusAnim1:SetSmoothing("OUT")
+  rlStatusPanel.anim = rlStatusAnim
+  
   rlTab.rlStatusPanel = rlStatusPanel
   
   -- Create 10 status lines
