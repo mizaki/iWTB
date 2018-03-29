@@ -676,7 +676,7 @@ function iwtb:OnInitialize()
         order = 1,
         type = "header",
       },
-      syncOnJoin = {
+      --[[syncOnJoin = {
         name = L["Request update on player join"],
         order = 2,
         desc = L["Request an update from a player when they join the raid"],
@@ -690,7 +690,7 @@ function iwtb:OnInitialize()
                 end 
                 end,              
         get = function(info) return db.char.syncOnJoin end
-      },
+      },]]
       syncOnlyGuild = {
         name = L["Sync only with guild members"],
         order = 3,
@@ -721,7 +721,7 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.showOnStart end
       },
-      syncGuildRank = {
+      --[[syncGuildRank = {
         name = L["Sync only these guild ranks:"],
         order = 4,
         desc = L["Sync with only players of a certain guild rank"],
@@ -743,7 +743,7 @@ function iwtb:OnInitialize()
                     db.char.syncGuildRank = build
                   end
                 end
-      },
+      },]]
       --[[copyRLdata = {
         name = L["Copy desire data"],
         order = 5,
