@@ -217,8 +217,9 @@ local function getInstances(expacID, isRL)
     
     if instanceInfoID == nil then finished = true
     else
-      local isRaid = select(10,EJ_GetInstanceByIndex(i,true))
-      local raidTitle = select(2,EJ_GetInstanceByIndex(i,true))
+      --local isRaid = select(10,EJ_GetInstanceByIndex(i,true))
+      --local raidTitle = select(2,EJ_GetInstanceByIndex(i,true))
+      local _, raidTitle, _, _, _, _, _, _, _, isRaid = EJ_GetInstanceByIndex(i,true)
       
       if isRaid and instanceInfoID ~= 557 then -- Draenor is listed as a raid, it's not!
         if isRL then
@@ -258,8 +259,9 @@ local function getBosses(raidID, isRL)
   repeat
     if EJ_GetEncounterInfoByIndex(i, raidID) == nil then finished = true
     else
-      local bossName = select(1, EJ_GetEncounterInfoByIndex(i, raidID))
-      local bossID = select(3, EJ_GetEncounterInfoByIndex(i, raidID))
+      --local bossName = select(1, EJ_GetEncounterInfoByIndex(i, raidID))
+      --local bossID = select(3, EJ_GetEncounterInfoByIndex(i, raidID))
+      local bossName, _, bossID = EJ_GetEncounterInfoByIndex(i, raidID)
       table.insert(raidBosses.bosses, bossID, bossName)
       table.insert(raidBosses.order, i, bossID)
       --print("BossID: " .. bossID .. " Boss: " .. bossName)
