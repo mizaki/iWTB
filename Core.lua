@@ -1,5 +1,6 @@
 iwtb = LibStub("AceAddon-3.0"):NewAddon("iWTB", "AceConsole-3.0", "AceEvent-3.0", "AceComm-3.0", "AceTimer-3.0")
 --local Serializer = LibStub("AceSerializer-3.0")
+
 local AceGUI = LibStub("AceGUI-3.0")
 iwtb.L = LibStub("AceLocale-3.0"):GetLocale("iWTB")
 local L = iwtb.L
@@ -59,6 +60,7 @@ local GUIRStatusSizeX = 300
 local GUIRStatusSizeY = 15
   
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
+
 
 -- API Calls and functions
 
@@ -623,6 +625,25 @@ local function removeRaiderData(f, name)
   raidUpdate()
 end
 
+local iwtbLDB = LibStub("LibDataBroker-1.1"):NewDataObject("iwtb_icon", {
+	type = "data source",
+	text = "iWTB - I Want That Boss!",
+	icon = "Interface\\Icons\\Achievement_BG_killingblow_startingrock",
+  OnTooltipShow = function(tooltip)
+		tooltip:AddLine("iWTB - I Want That Boss!");
+	end,
+	OnClick = function() 
+    if windowframe:IsShown() then
+      windowframe:Hide()
+      windowframe.title:Hide()
+    else
+      windowframe.title:Show()
+      windowframe:Show()
+      raidUpdate()
+    end 
+  end,})
+local iwtbIcon = LibStub("LibDBIcon-1.0")
+
 ---------------------------------
 function iwtb:OnInitialize()
 ---------------------------------
@@ -658,6 +679,9 @@ function iwtb:OnInitialize()
         syncOnlyGuild = true,
         showOnStart = false,
         syncGuildRank = {}, -- Is this correct?
+        minimap = {
+          hide = false,
+        },
     },
   }
   
@@ -667,6 +691,9 @@ function iwtb:OnInitialize()
   raiderDB = self.raiderDB
   iwtb.raidLeaderDB = LibStub("AceDB-3.0"):New("iWTBRaidLeaderDB", raidLeaderDefaults)
   raidLeaderDB = self.raidLeaderDB
+  
+  --db:ResetDB()
+	iwtbIcon:Register("iwtb_icon", iwtbLDB, db.char.minimap)
   
   rankInfo = getGuildRanks()
   expacInfo = getExpansions()
@@ -723,6 +750,23 @@ function iwtb:OnInitialize()
                 end 
                 end,              
         get = function(info) return db.char.showOnStart end
+      },
+      showMiniBut = {
+        name = L["Hide minimap button"],
+        order = 4,
+        desc = L["Hide the minimap button"],
+        width = "double",
+        type = "toggle",
+        set = function(info,val)
+                if val then 
+                  db.char.minimap.hide = true
+                  iwtbIcon:Hide("iwtb_icon")
+                else 
+                  db.char.minimap.hide = false
+                  iwtbIcon:Show("iwtb_icon")
+                end 
+                end,              
+        get = function(info) return db.char.minimap.hide end
       },
       --[[syncGuildRank = {
         name = L["Sync only these guild ranks:"],

@@ -30,6 +30,8 @@ L["Remove"] = true
 -- Options
 L["Request an update from a player when they join the raid"] = true
 L["Show on start"] = true
+L["Hide minimap button"] = true
+L["Hide the minimap button"] = true
 L["Show on addon when UI loads"] = true
 L["Request update on player join"] = true
 L["Sync only with guild members"] = true
