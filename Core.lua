@@ -283,7 +283,7 @@ local function dbSchemaCheck(level, expac)
   --print_table(raiderDB.char)
   if level == "expacs" then
     if expacInfo == nil then getExpansions() end
-    for key, value in pairs(expacInfo) do
+    for key, value in pairs(expacInfo) do -- can convert
       if raiderDB.char.expac[key] == nil then raiderDB.char.expac[key] = {} end
     end
     --print_table(raiderDB.char)
@@ -447,7 +447,7 @@ local function drawOoR(ooRraiders)
   
   if next(ooRraiders) ~= nil then
     local i = 1
-    for name,desireid in pairs(ooRraiders) do
+    for name,desireid in pairs(ooRraiders) do -- can convert?
       --print("name: " .. name .. " desireid: ", desireid)
       if i > curSlots then
         -- Add another slot
@@ -495,9 +495,9 @@ end
 
 local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss
   -- First check if the player is in rl db
-  for tname, rldb in pairs(raidLeaderDB.char.raiders) do
+  for tname, rldb in pairs(raidLeaderDB.char.raiders) do -- can convert
     if tname == name and rldb.expac ~= nil then
-      for expacid,expacs in pairs(rldb.expac) do
+      for expacid,expacs in pairs(rldb.expac) do -- can convert
         if expacid == expac then
           for tierid, tiers in pairs(expacs.tier) do
             if tierid == tier then
@@ -537,7 +537,7 @@ local function raidUpdate(self)
   local found = false
   local n = 1
   local ooRCount = 0
-  for rldbName,v in pairs(raidLeaderDB.char.raiders) do
+  for rldbName,v in pairs(raidLeaderDB.char.raiders) do -- can convert
     --print(rldbName)
     found = false
     n = 1
@@ -570,7 +570,7 @@ local function raidUpdate(self)
   -- Send Out of raid raiders to be drawn
   if ooRCount > 0 then drawOoR(ooRraiders) end
   
-  for subgrp,mem in pairs(raidMembers) do
+  for subgrp,mem in pairs(raidMembers) do -- can convert
     --grpMemSlotFrame[subgroup][n].nameText:SetText(name)
     --redrawGroup(subgrp)
     for k, player in ipairs(mem) do
@@ -610,7 +610,7 @@ function iwtb.setStatusText(f, text)
     rlTab.rlStatusPanel.text:SetText(text) -- Set top to latest
     rlTab.rlStatusPanel.anim:Play()
     rlStatusContent = churnContent(rlStatusContent)
-    for k,v in pairs(rlStatusContent) do
+    for k,v in pairs(rlStatusContent) do -- can convert
       rlTab.rlStatusPanel.content[k].text:SetText(v)
     end
   end
@@ -856,7 +856,7 @@ function iwtb:OnEnable()
           local newColOn = 7
           local bheight, bwidth = 50, 365
           bwidth = (GUItabWindowSizeX - 50) /2
-          for id, bossid in pairs(bossList.order) do
+          for id, bossid in pairs(bossList.order) do -- can convert
             local y = -(bheight + 20) * i
             if i > newColOn then y = -(bheight + 20) * (i - newColOn) end
             local x = 10
@@ -1083,7 +1083,7 @@ function iwtb:OnEnable()
       if expacInfo == nil then getExpansions() end
       info.func = raidsDropdownMenuOnClick
       --info.checked = false
-      for key, value in pairs(expacInfo) do
+      for key, value in pairs(expacInfo) do -- can convert
         --print(key .. ": " .. value)
         
         info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
@@ -1097,7 +1097,7 @@ function iwtb:OnEnable()
       if expacInfo == nil then getExpansions() end
       info.func = raidsDropdownMenuOnClick
       --info.checked = false
-      for key, value in pairs(expacInfo) do
+      for key, value in pairs(expacInfo) do -- can convert
         --print(key .. ": " .. value)
         
         info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
