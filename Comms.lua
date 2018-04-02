@@ -8,9 +8,7 @@ local L = iwtb.L
 local commSpec = 1 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
 
 local function printTable(table)
-  --print(type(table))
   if type(table) == "table" then
-    if table == nil then print("Empty table") end -- this won't work?
     for key, value in pairs(table) do
         print("k: " .. key .. " v: " .. value)
     end
@@ -25,7 +23,6 @@ XFER_DATA = "IWTB_XFER_DATA"
 
 iwtb.hashData = function (data)
   local serData = Serializer:Serialize(data)
-      
   local hash = Compressor:fcs32init()
   hash = Compressor:fcs32update(hash, serData)
   hash = Compressor:fcs32final(hash)
@@ -90,7 +87,6 @@ end
 iwtb.sendData = function (prefix, data, target) 
   --data.commSpec = commSpec
   local odata = data
-  --local outdata
   local sType
   
   --if prefix == "uhash" then
@@ -124,7 +120,6 @@ local function dbRLRaiderCheck(raider, expac, tier)
   if iwtb.raidLeaderDB.char.raiders[raider] == nil then
     iwtb.raidLeaderDB.char.raiders[raider] = {}
     iwtb.raidLeaderDB.char.raiders[raider].bossListHash = ""
-    --iwtb.raidLeaderDB.char.raiders[raider].expac = {}
   end
   -- Below is for when we update only say an expac, tier or boss (if enabling loot item selection). For now we just send the whole lot!
   --[[if iwtb.raidLeaderDB.raiders[raider].expac[expac] == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac] = {} end
@@ -134,116 +129,52 @@ end
 
 -- new data from raider
 local function xferData(prefix, text, distribution, sender)
-  --sender = StripRealm(sender)
-  --if sender == playerName or tContains(sessionBlacklist, sender) then
-    --return
-  --end
-  
   -- Do some check if we care about data. Requires promoted? In raid? Have an option to ignore all data?
-  
-  --print("Received update - "  .. sender)
   local success, data = iwtb.decodeData(text)
   
-  --[[if not(success) then
-    return AceComm:SendCommMessage(REQUEST_MSG_PREFIX, BossList.lastUpdates[sender], "WHISPER", sender)
-  end]]
-  
   if data.commSpec == nil or data.commSpec < commSpec then
-    --tinsert(sessionBlacklist, sender)
-    --print("Old comm spec: " .. sender)
     iwtb.setStatusText("raidleader", "Older comm spec: " .. sender)
     return
   elseif data.commSpec > commSpec then
-    --if not(gottenUpdateMessage) then
-      --print("Newer comm spec: " .. sender)
-      iwtb.setStatusText("raidleader", "Newer comm spec: " .. sender)
-      --gottenUpdateMessage = true
-    --end
+    iwtb.setStatusText("raidleader", "Newer comm spec: " .. sender)
     return
   else
-    --print("Update data")
-    --print_table(data.expac)
     if not iwtb.db.char.syncOnlyGuild or (iwtb.db.char.syncOnlyGuild and iwtb.isGuildMember(sender)) then
       dbRLRaiderCheck(sender)
       iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
       iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
       iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
-      --print(iwtb.hashData(data.expac))
-      --print_table(data.expac)
-      --print(data)
-      --print("RLDB: " .. iwtb.raidLeaderDB.char.raiders[sender].bossListHash)
     else
       iwtb.setStatusText("raidleader", L["Ignored non-guild member data - "] .. sender)
     end
   end
-  
-  -- Update local data
-  --BossList.MergeData(table, sender)
 end
 
+-- TODO
 local function requestData(prefix, text, distribution, sender)
-  --sender = StripRealm(sender)
-  --if sender == playerName or tContains(sessionBlacklist, sender) then
-    --return
-  --end
-  
-  --print("Received update - " .. prefix .. " from " .. sender)
   local success, data = iwtb.decodeData(text)
-  
-  --[[if not(success) then
-    return AceComm:SendCommMessage(REQUEST_MSG_PREFIX, BossList.lastUpdates[sender], "WHISPER", sender)
-  end]]
-  
   if data.commSpec == nil or data.commSpec < commSpec then
-    --tinsert(sessionBlacklist, sender)
     print("Old comm spec: " .. sender)
     return
   elseif data.commSpec > commSpec then
-    --if not(gottenUpdateMessage) then
-      print("Newer comm spec: " .. sender)
-      --gottenUpdateMessage = true
-    --end
+    print("Newer comm spec: " .. sender)
     return
   else
     --data.commSpec = nil
   end
-  --iwtb.setStatusText("raidleader","Received update - " .. prefix .. " from " .. sender)
-  -- Update local data
-  --BossList.MergeData(table, sender)
 end
 
---[[local function updateHash(prefix, text, distribution, sender)
-  print("Received hash - " .. prefix .. " from " .. sender)
-  
-  if data.commSpec == nil or data.commSpec < commSpec then
-    --tinsert(sessionBlacklist, sender)
-    print("Old/absent comm spec: " .. sender)
-    return
-  elseif data.commSpec > commSpec then
-    --if not(gottenUpdateMessage) then
-      print("Newer comm spec: " .. sender)
-      --gottenUpdateMessage = true
-    --end
-    return
-  else
-    --data.commSpec = nil
-  end
-  
-  -- Update local hash
-end]]
-
--- RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
+-- TODO: RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
 local function xferHash(prefix, text, distribution, sender)
-  --print("Request hash - " .. sender .. " Dist: " .. distribution)
   dbRLRaiderCheck(sender)
-  print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.raidLeaderDB.char.raiders[sender].bossListHash))
+  --print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.raidLeaderDB.char.raiders[sender].bossListHash))
   
   -- Temp statement for testing
   if text ~= iwtb.raidLeaderDB.char.raiders[sender].bossListHash then
   -- Final statement if RL sends (may change)
   --if text ~= iwtb.raiderDB.char.bossListHash then
     -- Send current boss list
-    print("Boss list hash mismatch - sending updated data")
+    --print("Boss list hash mismatch - sending updated data")
     iwtb.sendData("udata", iwtb.raiderDB.char, sender)
   end
   
