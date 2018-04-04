@@ -172,6 +172,10 @@ end
 
 -- Return expansions
 local function getExpansions()
+  if ( not EncounterJournal ) then
+    EncounterJournal_LoadUI()
+  end
+  
   if expacInfo == nil then
     expacInfo = {}
     for i=1, EJ_GetNumTiers() do
@@ -183,6 +187,10 @@ end
 
 -- Return the raids per expansion
 local function getInstances(expacID, isRL)
+  if ( not EncounterJournal ) then
+    EncounterJournal_LoadUI()
+  end
+  
   EJ_SelectTier(expacID)
   
   if isRL then
@@ -223,6 +231,10 @@ end
 
 -- Return the bosses per raid.
 local function getBosses(raidID, isRL)
+  if ( not EncounterJournal ) then
+    EncounterJournal_LoadUI()
+  end
+  
   EJ_SelectInstance(raidID)
   
   local raidBosses = {}

@@ -1,7 +1,7 @@
 ## Interface: 70300
-## Version: 0.01
+## Version: 0.02
 ## Title: iWTB
-## Author: Your Name Here
+## Author: jinxybob
 ## Notes: Helps organise which raider wants which boss.
 ## SavedVariables: iWTBDB, iWTBRaiderDB, iWTBRaidLeaderDB
 ## Dependencies: 
