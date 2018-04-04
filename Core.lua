@@ -172,10 +172,6 @@ end
 
 -- Return expansions
 local function getExpansions()
-  if ( not EncounterJournal ) then
-    EncounterJournal_LoadUI()
-  end
-  
   if expacInfo == nil then
     expacInfo = {}
     for i=1, EJ_GetNumTiers() do
