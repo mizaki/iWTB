@@ -1555,6 +1555,7 @@ function iwtb:OnEnable()
   L_UIDropDownMenu_SetText(instanceRLButton, L["Select raid"])
   
   bossesRLButton = CreateFrame("Frame", "bossesrlbutton", rlTab, "L_UIDropDownMenuTemplate")
+  bossesRLButton:SetFrameLevel(7)
   bossesRLButton:SetPoint("TOPLEFT", 500, -20)
   L_UIDropDownMenu_SetWidth(bossesRLButton, 200)
   L_UIDropDownMenu_Initialize(bossesRLButton, raidsDropdownMenu)
