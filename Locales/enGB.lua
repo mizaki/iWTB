@@ -26,6 +26,7 @@ L["No need"] = true
 L["No data"] = true
 L["Remove data"] = true
 L["Remove"] = true
+L["Out of raid players"] = true
 
 -- Options
 L["Request an update from a player when they join the raid"] = true

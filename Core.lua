@@ -343,6 +343,7 @@ local function drawOoR(ooRraiders)
   local curSlots = rlRaiderNotListFrame.rlOoRcontent:GetNumChildren()
   --local sloty = 0 -- This is the top padding
   
+  if curSlots > 5 then rlRaiderNotListFrame.text:Hide() end
   -- Hide any current OoR slots
   for i=1,curSlots do
     rlOoRcontentSlots[i]:Hide()
@@ -1502,7 +1503,18 @@ function iwtb:OnEnable()
   
   local texture = rlRaiderNotListFrame:CreateTexture("iwtboorlisttex") 
   texture:SetAllPoints(texture:GetParent())
-  texture:SetTexture(0, 0.5, 0, 1)
+  texture:SetColorTexture(0.2, 0.2, 0.2, 0.4)
+  
+  fontstring = rlRaiderNotListFrame:CreateFontString("iwtboorlisttext")
+  fontstring:SetPoint("CENTER",0,0)
+  if not fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "") then
+    print("Font not valid")
+  end
+  fontstring:SetWidth(GUIgrpSlotSizeX -15)
+  fontstring:SetJustifyV("CENTER")
+  fontstring:SetTextColor(1, 1, 1, 0.8)
+  fontstring:SetText(L["Out of raid players"])
+  rlRaiderNotListFrame.text = fontstring
 
   --scrollbar 
   local rlOoRscrollbar = CreateFrame("Slider", "iwtbrloorscrollbar", rlRaiderNotListFrame, "UIPanelScrollBarTemplate") 
