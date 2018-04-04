@@ -52,16 +52,7 @@ externals:
   Libs/!LibUIDropDownMenu:
     url: svn://svn..wowace.com/wow/libuidropdownmenu/trunk/libuidropdownmenu
     tag: latest
-    
-required-dependencies:
-  - monkey-town
-
-optional-dependencies:
-  - monkey-city
 
 manual-changelog: CHANGELOG.txt
 
 license-output: LICENSE.txt
-
-tools-used:
-  - data-tools # same as data-tools/mainline
