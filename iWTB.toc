@@ -6,7 +6,6 @@
 ## SavedVariables: iWTBDB, iWTBRaiderDB, iWTBRaidLeaderDB
 ## Dependencies: 
 ## OptionalDeps: LibStub, Ace3, LibUIDropDownMenu
-## X-Embeds: LibStub, Ace3
 
 embeds.xml
 
