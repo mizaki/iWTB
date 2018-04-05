@@ -56,7 +56,19 @@ local GUIgrpSlotSizeY = 45
 local GUIRStatusSizeX = 300 
 local GUIRStatusSizeY = 15
 
-local GUIfont = "Fonts\\FRIZQT__.TTF"
+-- Set font
+local GUIfont = ""
+if (LOCALE_koKR) then
+  GUIfont = "Fonts\\2002.TTF"
+elseif (LOCALE_zhCN) then
+  GUIfont = "Fonts\\ARKai_T.ttf"
+elseif (LOCALE_zhTW) then
+  GUIfont = "Fonts\\blei00d.TTF"
+elseif (LOCALE_ruRU) then
+  GUIfont = "Fonts\\FRIZQT___CYR.TTF"
+else
+  GUIfont = "Fonts\\FRIZQT__.TTF"
+end
   
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
 
@@ -367,9 +379,7 @@ local function drawOoR(ooRraiders)
     
     local fontstring = rlOoRcontentSlots[n]:CreateFontString()
     fontstring:SetPoint("TOP", 0, -5)
-    if not fontstring:SetFont(GUIfont, 12, "") then
-      print("Font not valid")
-    end
+    fontstring:SetFont(GUIfont, 12, "")
     fontstring:SetJustifyH("CENTER")
     fontstring:SetJustifyV("CENTER")
     fontstring:SetText(name)
@@ -390,10 +400,7 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].desireTag.text:SetPoint("CENTER")
     rlOoRcontentSlots[n].desireTag.text:SetJustifyH("CENTER")
     rlOoRcontentSlots[n].desireTag.text:SetJustifyV("BOTTOM")
-    local font_valid = rlOoRcontentSlots[n].desireTag.text:SetFont(GUIfont, 10, "")
-    if not font_valid then
-      print("Font not valid")
-    end
+    rlOoRcontentSlots[n].desireTag.text:SetFont(GUIfont, 10, "")
     rlOoRcontentSlots[n].desireTag.text:SetText(desire[desireid])
     
     -- Context menu
@@ -832,9 +839,7 @@ function iwtb:OnEnable()
              
             local fontstring = bossFrame[idofboss].fontFrame:CreateFontString("iwtbbosstext" .. idofboss)
             fontstring:SetAllPoints(bossFrame[idofboss].fontFrame)
-            if not fontstring:SetFont(GUIfont, 12, "") then
-              print("Font not valid")
-            end
+            fontstring:SetFont(GUIfont, 12, "")
             fontstring:SetJustifyH("LEFT")
             fontstring:SetJustifyV("MIDDLE")
             fontstring:SetText(bossList.bosses[bossid])
@@ -1117,9 +1122,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0,0,0,1)
   fontstring = title:CreateFontString("iwtbtitletext")
   fontstring:SetAllPoints(title)
-  if not fontstring:SetFont(GUIfont, 12, "") then
-    print("Font not valid")
-  end
+  fontstring:SetFont(GUIfont, 12, "")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("iWTB - I Want That Boss!")
@@ -1157,9 +1160,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0.2,0,0,1)
   fontstring = raiderStatusPanel:CreateFontString("iwtbrstatusptext")
   fontstring:SetAllPoints(raiderStatusPanel)
-  if not fontstring:SetFont(GUIfont, 10, "") then
-    print("Font not valid")
-  end
+  fontstring:SetFont(GUIfont, 10, "")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   raiderStatusPanel.text = fontstring
@@ -1266,9 +1267,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0,0,0,1)
   fontstring = rlTab:CreateFontString("iwtbrltabtesting")
   fontstring:SetAllPoints(rlTab)
-  if not fontstring:SetFont(GUIfont, 12, "") then
-    print("Font not valid")
-  end
+  fontstring:SetFont(GUIfont, 12, "")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("Raid Leader")
@@ -1289,9 +1288,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0.2,0,0,1)
   fontstring = rlStatusPanel:CreateFontString("iwtbrlstatusptext")
   fontstring:SetAllPoints(rlStatusPanel)
-  if not fontstring:SetFont(GUIfont, 10, "") then
-    print("Font not valid")
-  end
+  fontstring:SetFont(GUIfont, 10, "")
   --fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   rlStatusPanel.text = fontstring
@@ -1319,9 +1316,7 @@ function iwtb:OnEnable()
     texture:SetColorTexture(0.2,0,0,1)
     fontstring = rlStatusPanelContent[i]:CreateFontString("iwtbrlstatusptext")
     fontstring:SetAllPoints(rlStatusPanelContent[i])
-    if not fontstring:SetFont(GUIfont, 10, "") then
-      print("Font not valid")
-    end
+    fontstring:SetFont(GUIfont, 10, "")
     fontstring:SetJustifyV("CENTER")
     rlStatusPanelContent[i].text = fontstring
     rlStatusPanelContent[i]:Hide()
@@ -1385,10 +1380,7 @@ function iwtb:OnEnable()
       fontstring:SetWidth(GUIgrpSlotSizeX - 25)
       fontstring:SetJustifyH("CENTER")
       fontstring:SetJustifyV("CENTER")
-      local font_valid = fontstring:SetFont(GUIfont, 12, "")
-      if not font_valid then
-        print("Font not valid")
-      end
+      fontstring:SetFont(GUIfont, 12, "")
       fontstring:SetText(L["Empty"])
       grpMemSlotFrame[i][n].nameText = fontstring
       
@@ -1462,10 +1454,7 @@ function iwtb:OnEnable()
       grpMemSlotFrame[i][n].desireTag.text:SetPoint("CENTER")
       grpMemSlotFrame[i][n].desireTag.text:SetJustifyH("CENTER")
       grpMemSlotFrame[i][n].desireTag.text:SetJustifyV("BOTTOM")
-      local font_valid = grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
-      if not font_valid then
-        print("Font not valid")
-      end
+      grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
       grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
     end
   end
@@ -1509,9 +1498,7 @@ function iwtb:OnEnable()
   
   fontstring = rlRaiderNotListFrame:CreateFontString("iwtboorlisttext")
   fontstring:SetPoint("CENTER",0,0)
-  if not fontstring:SetFont(GUIfont, 12, "") then
-    print("Font not valid")
-  end
+  fontstring:SetFont(GUIfont, 12, "")
   fontstring:SetWidth(GUIgrpSlotSizeX -15)
   fontstring:SetJustifyV("CENTER")
   fontstring:SetTextColor(1, 1, 1, 0.8)
