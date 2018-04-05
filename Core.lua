@@ -407,7 +407,7 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n]:RegisterForClicks("RightButtonUp")
     rlOoRcontentSlots[n]:SetScript("OnClick", function(s) L_ToggleDropDownMenu(1, nil, s.dropdown, "cursor", -25, -10) end)
     rlOoRcontentSlots[n].dropdown = CreateFrame("Frame", "iwtbcmenu" .. n , rlOoRcontentSlots[n], "L_UIDropDownMenuTemplate")
-    UIDropDownMenu_Initialize(rlOoRcontentSlots[n].dropdown, slotDropDown_Menu)
+    L_UIDropDownMenu_Initialize(rlOoRcontentSlots[n].dropdown, slotDropDown_Menu)
   end
   
   if next(ooRraiders) ~= nil then
@@ -1057,36 +1057,39 @@ function iwtb:OnEnable()
   
   -- Right click menu for raid/OoR slots
   function slotDropDown_Menu(frame, level, menuList)
-    if slotIsEmpty(frame) then return end
-    local fname = string.match(frame:GetName(), "%a+")
-    local name = frame:GetParent().nameText:GetText()
-    local info
-    info = L_UIDropDownMenu_CreateInfo()
-    info.text = name
-    info.isTitle = true
-    info.notCheckable = true
-    L_UIDropDownMenu_AddButton(info)
-    
-    info = L_UIDropDownMenu_CreateInfo()
-    info.func = removeRaiderData
-    info.text = L["Remove data"]
-    info.arg1 = name
-    info.notCheckable = true
-    L_UIDropDownMenu_AddButton(info)
-    
-    if fname == "iwtbslotcmenu" then
+    if slotIsEmpty(frame) then
+      return
+    else
+      local fname = string.match(frame:GetName(), "%a+")
+      local name = frame:GetParent().nameText:GetText()
+      local info
       info = L_UIDropDownMenu_CreateInfo()
-      info.func = function(s, arg1, arg2, checked) UninviteUnit(name) end
-      info.text = L["Remove"]
+      info.text = name
+      info.isTitle = true
+      info.notCheckable = true
+      L_UIDropDownMenu_AddButton(info)
+      
+      info = L_UIDropDownMenu_CreateInfo()
+      info.func = removeRaiderData
+      info.text = L["Remove data"]
       info.arg1 = name
       info.notCheckable = true
       L_UIDropDownMenu_AddButton(info)
+      
+      if fname == "iwtbslotcmenu" then
+        info = L_UIDropDownMenu_CreateInfo()
+        info.func = function(s, arg1, arg2, checked) UninviteUnit(name) end
+        info.text = L["Remove"]
+        info.arg1 = name
+        info.notCheckable = true
+        L_UIDropDownMenu_AddButton(info)
+      end
+      
+      info = L_UIDropDownMenu_CreateInfo()
+      info.text = L["Cancel"]
+      info.notCheckable = true
+      L_UIDropDownMenu_AddButton(info)
     end
-    
-    info = L_UIDropDownMenu_CreateInfo()
-    info.text = "Cancel"
-    info.notCheckable = true
-    L_UIDropDownMenu_AddButton(info)
   end
   
   windowframe = CreateFrame("Frame", "iwtbwindow", UIParent)
@@ -1428,7 +1431,7 @@ function iwtb:OnEnable()
       -- Context menu
       grpMemSlotFrame[i][n].dropdown = CreateFrame("Frame", "iwtbslotcmenu" .. i .. "-" .. n , grpMemSlotFrame[i][n], "L_UIDropDownMenuTemplate")
       grpMemSlotFrame[i][n]:SetScript("OnClick", function(s) L_ToggleDropDownMenu(1, nil, s.dropdown, "cursor", -25, -10) end)
-      UIDropDownMenu_Initialize(grpMemSlotFrame[i][n].dropdown, slotDropDown_Menu)
+      L_UIDropDownMenu_Initialize(grpMemSlotFrame[i][n].dropdown, slotDropDown_Menu)
 
       -- role texture
       texture = grpMemSlotFrame[i][n]:CreateTexture()
