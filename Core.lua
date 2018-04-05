@@ -345,7 +345,6 @@ local function drawOoR(ooRraiders)
   local curSlots = rlRaiderNotListFrame.rlOoRcontent:GetNumChildren()
   --local sloty = 0 -- This is the top padding
   
-  if curSlots > 5 then rlRaiderNotListFrame.text:Hide() end
   -- Hide any current OoR slots
   for i=1,curSlots do
     rlOoRcontentSlots[i]:Hide()
@@ -406,7 +405,7 @@ local function drawOoR(ooRraiders)
   
   if next(ooRraiders) ~= nil then
     local i = 1
-    for name,desireid in pairs(ooRraiders) do -- can convert?
+    for name,desireid in pairs(ooRraiders) do -- [name] = desireid
       if i > curSlots then
         -- Add another slot
         createOoRSlot(i, name, desireid)
@@ -417,6 +416,7 @@ local function drawOoR(ooRraiders)
         rlOoRcontentSlots[i]:Show()
       end
       i = i +1
+      if i > 5 then rlRaiderNotListFrame.text:Hide() else rlRaiderNotListFrame.text:Show() end
     end
   end
 end
