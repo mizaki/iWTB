@@ -326,9 +326,7 @@ local function MemberFrameContainsPoint(x, y)
 end
 
 local function slotIsEmpty(f)
-  if f.nameText then
-    if f.nameText:GetText() == L["Empty"] then return true else return false end
-  end
+  if f:GetParent():GetAttribute("raidid") >0 then return false else return true end
 end
 
 local function grpHasEmpty(grp)
@@ -436,6 +434,7 @@ local function redrawGroup(grp)
       grpMemSlotFrame[grp][n]:SetParent(grpMemFrame[grp])
       grpMemSlotFrame[grp][n]:SetPoint("TOPLEFT", slotx, -3)
       grpMemSlotFrame[grp][n].nameText:SetText(L["Empty"])
+      grpMemSlotFrame[grp][n]:SetAttribute("raidid", 0)
       grpMemSlotFrame[grp][n].nameText:SetTextColor(0.8,0.8,0.8,0.7)
       grpMemSlotFrame[grp][n].roleTexture:Hide()
     end
@@ -447,6 +446,7 @@ local function redrawGroup(grp)
       grpMemSlotFrame[i][n]:SetParent(grpMemFrame[i])
       grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
       grpMemSlotFrame[i][n].nameText:SetText(L["Empty"])
+      grpMemSlotFrame[i][n]:SetAttribute("raidid", 0)
       grpMemSlotFrame[i][n].nameText:SetTextColor(0.8,0.8,0.8,0.7)
       grpMemSlotFrame[i][n].roleTexture:Hide()
     end
@@ -1373,6 +1373,7 @@ function iwtb:OnEnable()
       grpMemSlotFrame[i][n]:SetWidth(GUIgrpSlotSizeX)
       grpMemSlotFrame[i][n]:SetHeight(GUIgrpSlotSizeY)
       grpMemSlotFrame[i][n]:ClearAllPoints()
+      grpMemSlotFrame[i][n]:SetAttribute("raidid", 0)
       grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
       
       local texture = grpMemSlotFrame[i][n]:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
