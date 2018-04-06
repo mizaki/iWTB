@@ -1057,10 +1057,10 @@ function iwtb:OnEnable()
   
   -- Right click menu for raid/OoR slots
   function slotDropDown_Menu(frame, level, menuList)
-    if slotIsEmpty(frame) then
+    local fname = string.match(frame:GetName(), "%a+")
+    if fname == "iwtbslotcmenu" and slotIsEmpty(frame) then
       return
     else
-      local fname = string.match(frame:GetName(), "%a+")
       local name = frame:GetParent().nameText:GetText()
       local info
       info = L_UIDropDownMenu_CreateInfo()
