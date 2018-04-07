@@ -55,20 +55,6 @@ local GUIgrpSlotSizeX = 110
 local GUIgrpSlotSizeY = 45
 local GUIRStatusSizeX = 300 
 local GUIRStatusSizeY = 15
-
--- Set font
-local GUIfont = ""
-if (LOCALE_koKR) then
-  GUIfont = "Fonts\\2002.TTF"
-elseif (LOCALE_zhCN) then
-  GUIfont = "Fonts\\ARKai_T.ttf"
-elseif (LOCALE_zhTW) then
-  GUIfont = "Fonts\\blei00d.TTF"
-elseif (LOCALE_ruRU) then
-  GUIfont = "Fonts\\FRIZQT___CYR.TTF"
-else
-  GUIfont = "Fonts\\FRIZQT__.TTF"
-end
   
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
 
@@ -377,7 +363,7 @@ local function drawOoR(ooRraiders)
     
     local fontstring = rlOoRcontentSlots[n]:CreateFontString()
     fontstring:SetPoint("TOP", 0, -5)
-    fontstring:SetFont(GUIfont, 12, "")
+    fontstring:SetFontObject("Game12Font")
     fontstring:SetJustifyH("CENTER")
     fontstring:SetJustifyV("CENTER")
     fontstring:SetText(name)
@@ -398,7 +384,8 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].desireTag.text:SetPoint("CENTER")
     rlOoRcontentSlots[n].desireTag.text:SetJustifyH("CENTER")
     rlOoRcontentSlots[n].desireTag.text:SetJustifyV("BOTTOM")
-    rlOoRcontentSlots[n].desireTag.text:SetFont(GUIfont, 10, "")
+    --rlOoRcontentSlots[n].desireTag.text:SetFont(GUIfont, 10, "")
+    rlOoRcontentSlots[n].desireTag.text:SetFontObject("SpellFont_Small")
     rlOoRcontentSlots[n].desireTag.text:SetText(desire[desireid])
     
     -- Context menu
@@ -433,6 +420,7 @@ local function redrawGroup(grp)
       grpMemSlotFrame[grp][n]:ClearAllPoints()
       grpMemSlotFrame[grp][n]:SetParent(grpMemFrame[grp])
       grpMemSlotFrame[grp][n]:SetPoint("TOPLEFT", slotx, -3)
+      grpMemSlotFrame[grp][n].texture:SetColorTexture(0.2, 0.2 ,0.2 ,1)
       grpMemSlotFrame[grp][n].nameText:SetText(L["Empty"])
       grpMemSlotFrame[grp][n]:SetAttribute("raidid", 0)
       grpMemSlotFrame[grp][n].nameText:SetTextColor(0.8,0.8,0.8,0.7)
@@ -445,6 +433,7 @@ local function redrawGroup(grp)
       grpMemSlotFrame[i][n]:ClearAllPoints()
       grpMemSlotFrame[i][n]:SetParent(grpMemFrame[i])
       grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
+      grpMemSlotFrame[i][n].texture:SetColorTexture(0.2, 0.2 ,0.2 ,1)
       grpMemSlotFrame[i][n].nameText:SetText(L["Empty"])
       grpMemSlotFrame[i][n]:SetAttribute("raidid", 0)
       grpMemSlotFrame[i][n].nameText:SetTextColor(0.8,0.8,0.8,0.7)
@@ -527,6 +516,7 @@ local function raidUpdate(self)
       local textColour = RAID_CLASS_COLORS[player.fileName]
       local desireid = hasDesire(player.name, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
       grpMemSlotFrame[subgrp][k]:SetAttribute("raidid", player.raidid) -- We can use this when changing player group
+      grpMemSlotFrame[subgrp][k].texture:SetColorTexture(0, 0 ,0 ,1)
       grpMemSlotFrame[subgrp][k].nameText:SetText(player.name)
       if player.online then
         grpMemSlotFrame[subgrp][k].nameText:SetTextColor(textColour.r, textColour.g, textColour.b)
@@ -839,7 +829,7 @@ function iwtb:OnEnable()
              
             local fontstring = bossFrame[idofboss].fontFrame:CreateFontString("iwtbbosstext" .. idofboss)
             fontstring:SetAllPoints(bossFrame[idofboss].fontFrame)
-            fontstring:SetFont(GUIfont, 12, "")
+            fontstring:SetFontObject("Game12Font")
             fontstring:SetJustifyH("LEFT")
             fontstring:SetJustifyV("MIDDLE")
             fontstring:SetText(bossList.bosses[bossid])
@@ -1125,7 +1115,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0,0,0,1)
   fontstring = title:CreateFontString("iwtbtitletext")
   fontstring:SetAllPoints(title)
-  fontstring:SetFont(GUIfont, 12, "")
+  fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("iWTB - I Want That Boss!")
@@ -1163,7 +1153,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0.2,0,0,1)
   fontstring = raiderStatusPanel:CreateFontString("iwtbrstatusptext")
   fontstring:SetAllPoints(raiderStatusPanel)
-  fontstring:SetFont(GUIfont, 10, "")
+  fontstring:SetFontObject("SpellFont_Small")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   raiderStatusPanel.text = fontstring
@@ -1268,12 +1258,6 @@ function iwtb:OnEnable()
   texture = rlTab:CreateTexture("iwtbraidleadertex")
   texture:SetAllPoints(rlTab)
   texture:SetColorTexture(0,0,0,1)
-  fontstring = rlTab:CreateFontString("iwtbrltabtesting")
-  fontstring:SetAllPoints(rlTab)
-  fontstring:SetFont(GUIfont, 12, "")
-  fontstring:SetJustifyH("CENTER")
-  fontstring:SetJustifyV("CENTER")
-  fontstring:SetText("Raid Leader")
   
   ---------------------------
   -- Raider status text panel
@@ -1291,8 +1275,7 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0.2,0,0,1)
   fontstring = rlStatusPanel:CreateFontString("iwtbrlstatusptext")
   fontstring:SetAllPoints(rlStatusPanel)
-  fontstring:SetFont(GUIfont, 10, "")
-  --fontstring:SetJustifyH("CENTER")
+  fontstring:SetFontObject("SpellFont_Small")
   fontstring:SetJustifyV("CENTER")
   rlStatusPanel.text = fontstring
   
@@ -1319,7 +1302,7 @@ function iwtb:OnEnable()
     texture:SetColorTexture(0.2,0,0,1)
     fontstring = rlStatusPanelContent[i]:CreateFontString("iwtbrlstatusptext")
     fontstring:SetAllPoints(rlStatusPanelContent[i])
-    fontstring:SetFont(GUIfont, 10, "")
+    fontstring:SetFontObject("SpellFont_Small")
     fontstring:SetJustifyV("CENTER")
     rlStatusPanelContent[i].text = fontstring
     rlStatusPanelContent[i]:Hide()
@@ -1379,12 +1362,13 @@ function iwtb:OnEnable()
       local texture = grpMemSlotFrame[i][n]:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
       local fontstring = grpMemSlotFrame[i][n]:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
       texture:SetAllPoints(texture:GetParent())
-      texture:SetColorTexture(0,0,0,1)
+      texture:SetColorTexture(0.2, 0.2 ,0.2 ,1)
+      grpMemSlotFrame[i][n].texture = texture
       fontstring:SetPoint("CENTER", 0, 6)
       fontstring:SetWidth(GUIgrpSlotSizeX - 25)
       fontstring:SetJustifyH("CENTER")
       fontstring:SetJustifyV("CENTER")
-      fontstring:SetFont(GUIfont, 12, "")
+      fontstring:SetFontObject("Game12Font")
       fontstring:SetText(L["Empty"])
       grpMemSlotFrame[i][n].nameText = fontstring
       
@@ -1458,7 +1442,8 @@ function iwtb:OnEnable()
       grpMemSlotFrame[i][n].desireTag.text:SetPoint("CENTER")
       grpMemSlotFrame[i][n].desireTag.text:SetJustifyH("CENTER")
       grpMemSlotFrame[i][n].desireTag.text:SetJustifyV("BOTTOM")
-      grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
+      --grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
+      grpMemSlotFrame[i][n].desireTag.text:SetFontObject("SpellFont_Small")
       grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
     end
   end
@@ -1502,7 +1487,7 @@ function iwtb:OnEnable()
   
   fontstring = rlRaiderNotListFrame:CreateFontString("iwtboorlisttext")
   fontstring:SetPoint("CENTER",0,0)
-  fontstring:SetFont(GUIfont, 12, "")
+  fontstring:SetFontObject("Game12Font")
   fontstring:SetWidth(GUIgrpSlotSizeX -15)
   fontstring:SetJustifyV("CENTER")
   fontstring:SetTextColor(1, 1, 1, 0.8)
