@@ -471,7 +471,9 @@ end
 
 local function raidUpdate(self)
   -- Only update if frame is visible
-  if not rlTab:IsShown() then return end -- not working, get a var to deactivate?
+  if not windowframe:IsShown() or not rlTab:IsShown() then
+    return
+  end
   
   local i = 1
   local raidMembers = {}
