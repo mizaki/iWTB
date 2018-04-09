@@ -312,7 +312,7 @@ local function MemberFrameContainsPoint(x, y)
 end
 
 local function slotIsEmpty(f)
-  if f:GetParent():GetAttribute("raidid") >0 then return false else return true end
+  if f:GetAttribute("raidid") >0 then return false else return true end
 end
 
 local function grpHasEmpty(grp)
@@ -410,6 +410,10 @@ local function drawOoR(ooRraiders)
       i = i +1
       if i > 5 then rlRaiderNotListFrame.text:Hide() else rlRaiderNotListFrame.text:Show() end
     end
+  print("OoR: ",i-1)
+  --rlRaiderNotListFrame.rlOoRcontent:SetHeight(GUIgrpSlotSizeY * i + 5)
+  rlRaiderNotListFrame.rlOoRscrollbar:SetMinMaxValues(1, (i-1)*((GUIgrpSlotSizeY)/2))
+  --rlRaiderNotListFrame.rlOoRscrollbar:SetValueStep(i)
   end
 end
 
@@ -467,7 +471,7 @@ end
 
 local function raidUpdate(self)
   -- Only update if frame is visible
-  if not rlTab:IsShown() then return end
+  if not rlTab:IsShown() then return end -- not working, get a var to deactivate?
   
   local i = 1
   local raidMembers = {}
@@ -1048,7 +1052,7 @@ function iwtb:OnEnable()
   -- Right click menu for raid/OoR slots
   function slotDropDown_Menu(frame, level, menuList)
     local fname = string.match(frame:GetName(), "%a+")
-    if fname == "iwtbslotcmenu" and slotIsEmpty(frame) then
+    if fname == "iwtbslotcmenu" and slotIsEmpty(frame:GetParent()) then
       return
     else
       local name = frame:GetParent().nameText:GetText()
@@ -1480,6 +1484,10 @@ function iwtb:OnEnable()
   rlRaiderNotListFrame:SetSize((GUIgrpSlotSizeX +10), (rlRaiderListFrame:GetHeight() -160))
   rlRaiderNotListFrame:SetPoint("TOP", rlRaiderListFrame, 0, -55)
   rlRaiderNotListFrame:SetPoint("BOTTOMRIGHT", rlRaiderListFrame, -30, 20)
+  rlRaiderNotListFrame:SetScript("OnMouseWheel", function(s,v)
+    local curV = rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
+    rlRaiderNotListFrame.rlOoRscrollbar:SetValue(curV + -(v * 15))
+  end)
   
   local texture = rlRaiderNotListFrame:CreateTexture("iwtboorlisttex") 
   texture:SetAllPoints(texture:GetParent())
@@ -1495,36 +1503,37 @@ function iwtb:OnEnable()
   rlRaiderNotListFrame.text = fontstring
 
   --scrollbar 
-  local rlOoRscrollbar = CreateFrame("Slider", "iwtbrloorscrollbar", rlRaiderNotListFrame, "UIPanelScrollBarTemplate") 
-  rlOoRscrollbar:SetPoint("TOPLEFT", rlRaiderNotListFrame, "TOPRIGHT", 4, -16) 
-  rlOoRscrollbar:SetPoint("BOTTOMLEFT", rlRaiderNotListFrame, "BOTTOMRIGHT", 4, 16) 
-  rlOoRscrollbar:SetMinMaxValues(1, 500) -- Need to set dynamically this according to slots slotsizey /2 ?
-  rlOoRscrollbar:SetValueStep(5) 
-  rlOoRscrollbar.scrollStep = 5 
-  rlOoRscrollbar:SetValue(0) 
-  rlOoRscrollbar:SetWidth(16) 
-  rlOoRscrollbar:SetScript("OnValueChanged", 
-  function (self, value) 
-    self:GetParent():SetVerticalScroll(value) 
-  end) 
-  local scrollbg = rlOoRscrollbar:CreateTexture(nil, "BACKGROUND") 
-  scrollbg:SetAllPoints(scrollbar) 
-  scrollbg:SetTexture(0, 0, 0, 0.4) 
-  rlRaiderNotListFrame.rlOoRscrollbar = rlOoRscrollbar 
+  local rlOoRscrollbar = CreateFrame("Slider", "iwtbrloorscrollbar", rlRaiderNotListFrame, "UIPanelScrollBarTemplate")
+  rlOoRscrollbar:SetPoint("TOPLEFT", rlRaiderNotListFrame, "TOPRIGHT", 4, -16)
+  rlOoRscrollbar:SetPoint("BOTTOMLEFT", rlRaiderNotListFrame, "BOTTOMRIGHT", 4, 16)
+  rlOoRscrollbar:SetMinMaxValues(1, 1)
+  rlOoRscrollbar:SetValueStep(20)
+  --rlOoRscrollbar.scrollStep = 10 
+  rlOoRscrollbar:SetValue(0)
+  rlOoRscrollbar:SetWidth(16)
+  rlOoRscrollbar:SetObeyStepOnDrag(true)
+  rlOoRscrollbar:SetScript("OnValueChanged",
+  function (self, value)
+    self:GetParent():SetVerticalScroll(value)
+  end)
+  local scrollbg = rlOoRscrollbar:CreateTexture(nil, "BACKGROUND")
+  scrollbg:SetAllPoints(scrollbar)
+  scrollbg:SetTexture(0, 0, 0, 0.4)
+  rlRaiderNotListFrame.rlOoRscrollbar = rlOoRscrollbar
 
   --content frame 
-  local rlOoRcontent = CreateFrame("Frame", "iwtbrloorlist", rlRaiderNotListFrame) 
+  local rlOoRcontent = CreateFrame("Frame", "iwtbrloorlist", rlRaiderNotListFrame)
   rlOoRcontent:SetWidth((rlOoRcontent:GetParent():GetWidth()) -2)
-  rlOoRcontent:SetHeight(1500) -- Need to set dynamically this according to slots slotsizey + 20?
+  rlOoRcontent:SetHeight(rlRaiderNotListFrame:GetHeight())
   rlOoRcontent:SetScript("OnMouseWheel", function(s,v)
     local curV = rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
     rlRaiderNotListFrame.rlOoRscrollbar:SetValue(curV + -(v * 15))
   end)
   rlOoRcontent:ClearAllPoints()
   rlOoRcontent:SetPoint("TOPLEFT", 0, 0)
-  local texture = rlOoRcontent:CreateTexture() 
-  texture:SetAllPoints(texture:GetParent()) 
-  texture:SetTexture(0, 0, 0.5, 1) 
+  local texture = rlOoRcontent:CreateTexture()
+  texture:SetAllPoints(texture:GetParent())
+  texture:SetTexture(0, 0, 0.5, 1)
 
   rlRaiderNotListFrame:SetScrollChild(rlOoRcontent)
   rlRaiderNotListFrame.rlOoRcontent = rlOoRcontent
