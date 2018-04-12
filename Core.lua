@@ -448,7 +448,7 @@ end
 
 local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss
   -- First check if the player is in rl db
-  for tname, rldb in pairs(raidLeaderDB.char.raiders) do -- can convert
+  for tname, rldb in pairs(raidLeaderDB.char.raiders) do
     if tname == name and rldb.expac ~= nil then
       for expacid,expacs in pairs(rldb.expac) do -- can convert
         if expacid == expac then
