@@ -410,7 +410,6 @@ local function drawOoR(ooRraiders)
       i = i +1
       if i > 5 then rlRaiderNotListFrame.text:Hide() else rlRaiderNotListFrame.text:Show() end
     end
-  print("OoR: ",i-1)
   --rlRaiderNotListFrame.rlOoRcontent:SetHeight(GUIgrpSlotSizeY * i + 5)
   rlRaiderNotListFrame.rlOoRscrollbar:SetMinMaxValues(1, (i-1)*((GUIgrpSlotSizeY)/2))
   --rlRaiderNotListFrame.rlOoRscrollbar:SetValueStep(i)
