@@ -27,6 +27,7 @@ L["No data"] = true
 L["Remove data"] = true
 L["Remove"] = true
 L["Cancel"] = true
+L["Close"] = true
 L["Out of raid players"] = true
 
 -- Options
