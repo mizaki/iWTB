@@ -1642,8 +1642,27 @@ function iwtb:OnEnable()
     raiderTab:Hide()  -- Show page 1.
   end)
   
+  local optionsButton = CreateFrame("Button", "$parentTab3", windowframe, "TabButtonTemplate")
+  optionsButton:SetWidth(GUItabButtonSizeX)
+  optionsButton:SetHeight(GUItabButtonSizeY)
+  optionsButton:SetText(L["Options"])
+  optionsButton:SetPoint("CENTER", optionsButton:GetParent(), "TOPLEFT", 290, -40)
+  texture = optionsButton:CreateTexture("raiderbuttex")
+  texture:SetAllPoints(optionsButton)
+  texture:SetColorTexture(0, 0, 0, 1)
+  optionsButton:Enable()
+  optionsButton:RegisterForClicks("LeftButtonUp")
+  optionsButton:SetScript("OnClick", function(s)
+    windowframe:Hide()
+    windowframe.title:Hide()
+    InterfaceCategoryList_Update()
+    InterfaceOptionsOptionsFrame_RefreshCategories()
+    InterfaceAddOnsList_Update()
+    InterfaceOptionsFrame_OpenToCategory("iWTB")
+  end)
+  
   -- Register tabs
-  PanelTemplates_SetNumTabs(windowframe, 2)  -- 2 because there are 2 frames total.
+  PanelTemplates_SetNumTabs(windowframe, 3)  -- 2 because there are 2 frames total.
   PanelTemplates_SetTab(windowframe, 1)     -- 1 because we want tab 1 selected.
   raiderTab:Show()  -- Show page 1.
   rlTab:Hide()  -- Hide all other pages (in this case only one).
