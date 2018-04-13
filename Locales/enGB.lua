@@ -28,6 +28,7 @@ L["Remove data"] = true
 L["Remove"] = true
 L["Cancel"] = true
 L["Close"] = true
+L["Tutorial"] = true
 L["Options"] = true
 L["Out of raid players"] = true
 
@@ -46,6 +47,8 @@ L["Sync only these guild ranks:"] = true
 L["Sync with only players of a certain guild rank"] = true
 L["Copy desire data"] = true
 L["Copy desire data from one character to another"] = true
+L["Show tutorial window"] = true
+L["Show the tutorial window when first opened"] = true
 
 -- Status messages
 L["Received update - "] = true
@@ -58,3 +61,10 @@ L["Ignored data. Change in options to receive data"] = true
 -- Confirmation boxes
 L["Remove selected desire from ALL bosses?"] = true
 L["Remove ALL raiders desire data?"] = true
+
+-- Tutorial
+L["How to use iWTB - I Want That Boss!"] = true
+L["Select your \"desire\" for a raid boss from the dropdown menu. When you are in a raid group with your raid leader(s), click the \"send\" button for them to recieve the information."] = true
+L["First make sure the option to \"Ignore All\" is |cffff4f5bNOT|r set (on by default)."] = true
+L["If they've not already done so, ask your raiders to send their information. You will see the last message in the red bar (hover over to see more) in the Raid Leader tab."] = true
+L["Select the raid boss from the dropdown menu to see raiders \"desire\". Any raider not in the raid group that you have information for will be shown in the \"Out of Raid\" window."] = true

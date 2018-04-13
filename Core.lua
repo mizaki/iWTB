@@ -608,6 +608,7 @@ function iwtb:OnInitialize()
         ignoreAll = true,
         showOnStart = false,
         syncGuildRank = {},
+        showTutorial = true,
         minimap = {
           hide = false,
         },
@@ -649,6 +650,21 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.syncOnJoin end
       },]]
+      showTutorial = {
+        name = L["Show tutorial window"],
+        order = 6,
+        desc = L["Show the tutorial window when first opened"],
+        width = "double",
+        type = "toggle",
+        set = function(info,val)
+                if val then 
+                  db.char.showTutorial = true
+                else 
+                  db.char.showTutorial = false
+                end 
+                end,              
+        get = function(info) return db.char.showTutorial end
+      },
       syncOnlyGuild = {
         name = L["Sync only with guild members"],
         order = 5,
@@ -1155,6 +1171,70 @@ function iwtb:OnEnable()
   
   -- Tabs
   
+  -- Tutorial frame
+  tutorialFrame = CreateFrame("Frame", "iwtbtutorialframe", windowframe)
+  tutorialFrame:SetWidth(GUItabWindowSizeX-30)
+  tutorialFrame:SetHeight(GUItabWindowSizeY-30)
+  tutorialFrame:SetFrameStrata("FULLSCREEN")
+  tutorialFrame:SetPoint("CENTER", 0, -20)
+  texture = tutorialFrame:CreateTexture("iwtbtutorialtex")
+  texture:SetAllPoints(tutorialFrame)
+  texture:SetColorTexture(0.1,0.1,0.1,1)
+  
+  tutorialHTML = CreateFrame("SimpleHTML", "iwtbtutorialhtml", tutorialFrame)
+  tutorialHTML:SetWidth(GUItabWindowSizeX-100)
+  tutorialHTML:SetHeight(GUItabWindowSizeY-100)
+  tutorialHTML:SetPoint("CENTER", 0, 0)
+  --tutorialHTML:SetFrameStrata("FULLSCREEN")
+  --[[texture = tutorialHTML:CreateTexture("iwtbtutorialtex")
+  texture:SetAllPoints(tutorialHTML)
+  texture:SetColorTexture(0,0,0,1)]]
+  tutorialHTML:SetFontObject("Game12Font")
+  tutorialHTML:SetFontObject('h1', Game20Font)
+  tutorialHTML:SetFontObject('h2', Game18Font)
+  tutorialHTML:SetFontObject('p', Game15Font)
+  --tutorialHTML:SetText('<html><body><h1>Test</h1><h2>Raider</h2></body></html>')
+  local htmlText = '<html><body>' ..
+    '<h1 align="center">' .. L["How to use iWTB - I Want That Boss!"] .. '</h1>' ..
+    '<br />' ..
+    '<h2>|cffffde4c' .. L["Raider"] .. '|r</h2>' ..
+    '<br /><p>' .. L["Select your \"desire\" for a raid boss from the dropdown menu. When you are in a raid group with your raid leader(s), click the \"send\" button for them to recieve the information."] .. '</p>' ..
+    '<br /><h2>|cffffde4c' .. L["Raid Leader"] .. '|r</h2>' ..
+    '<br /><p>' .. L["First make sure the option to \"Ignore All\" is |cffff4f5bNOT|r set (on by default)."] .. '</p>' ..
+    '<br /><p>' .. L["If they've not already done so, ask your raiders to send their information. You will see the last message in the red bar (hover over to see more) in the Raid Leader tab."] .. '</p>' ..
+    '<br /><p>' .. L["Select the raid boss from the dropdown menu to see raiders \"desire\". Any raider not in the raid group that you have information for will be shown in the \"Out of Raid\" window."] .. '</p>' ..
+    '</body></html>'
+  tutorialHTML:SetText(htmlText)
+  
+  -- Tutorial close button
+  local tutorialCloseButton = CreateFrame("Button", "iwtbtutorialclosebutton", tutorialFrame, "UIPanelButtonTemplate")
+  tutorialCloseButton:SetWidth(GUItabButtonSizeX)
+  tutorialCloseButton:SetHeight(GUItabButtonSizeY)
+  tutorialCloseButton:SetText(L["Close"])
+  --tutorialCloseButton:SetFrameLevel(5)
+  tutorialCloseButton:SetPoint("BOTTOMRIGHT", -10, 10)
+  texture = tutorialCloseButton:CreateTexture("tutclosebuttex")
+  texture:SetAllPoints(tutorialCloseButton)
+  tutorialCloseButton:Enable()
+  tutorialCloseButton:RegisterForClicks("LeftButtonUp")
+  tutorialCloseButton:SetScript("OnClick", function(s)
+    tutorialFrame:Hide()
+  end)
+  
+  if not db.char.showTutorial then tutorialFrame:Hide() end
+
+  -- Checkbox, hide show on start
+  tutorialCheckButton = CreateFrame("CheckButton", "iwtbtutorialcheckbutton", tutorialFrame, "ChatConfigCheckButtonTemplate")
+  tutorialCheckButton:SetPoint("BOTTOMLEFT", 10, 10)
+  tutorialCheckButton:SetChecked(db.char.showTutorial)
+  iwtbtutorialcheckbuttonText:SetText(L["Show on start"])
+  tutorialCheckButton.tooltip = L["Show the tutorial window when first opened"]
+  tutorialCheckButton:SetScript("OnClick", 
+    function(s)
+      if not s:GetChecked() then db.char.showTutorial = false else db.char.showTutorial = true end
+    end
+  )
+  
   -- Raider tab
   raiderTab = CreateFrame("Frame", "iwtbraidertab", windowframe)
   raiderTab:SetWidth(GUItabWindowSizeX)
@@ -1255,6 +1335,21 @@ function iwtb:OnEnable()
   raiderCloseButton:SetScript("OnClick", function(s)
     windowframe:Hide()
     windowframe.title:Hide()
+  end)
+  
+  -- Raider tutorial button
+  local raiderTutorialButton = CreateFrame("Button", "iwtbraidertutorialbutton", raiderTab, "UIPanelButtonTemplate")
+  raiderTutorialButton:SetWidth(GUItabButtonSizeX)
+  raiderTutorialButton:SetHeight(GUItabButtonSizeY)
+  raiderTutorialButton:SetText(L["Tutorial"])
+  raiderTutorialButton:SetFrameLevel(5)
+  raiderTutorialButton:SetPoint("BOTTOMLEFT", 130, 30)
+  texture = raiderTutorialButton:CreateTexture("raidertutbuttex")
+  texture:SetAllPoints(raiderTutorialButton)
+  raiderTutorialButton:Enable()
+  raiderTutorialButton:RegisterForClicks("LeftButtonUp")
+  raiderTutorialButton:SetScript("OnClick", function(s)
+    tutorialFrame:Show()
   end)
   
   -- Raider reset DB button
