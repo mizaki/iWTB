@@ -40,6 +40,8 @@ L["Show on addon when UI loads"] = true
 L["Request update on player join"] = true
 L["Sync only with guild members"] = true
 L["Sync only with members of your guild"] = true
+L["Ignore all"] = true
+L["Ignore all data sent from raiders"] = true
 L["Sync only these guild ranks:"] = true
 L["Sync with only players of a certain guild rank"] = true
 L["Copy desire data"] = true
@@ -51,6 +53,7 @@ L["Removed data - "] = true
 L["Sent data to raid group"] = true
 L["Need to be in a raid group"] = true
 L["Ignored non-guild member data - "] = true
+L["Ignored data. Change in options to receive data"] = true
 
 -- Confirmation boxes
 L["Remove selected desire from ALL bosses?"] = true

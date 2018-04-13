@@ -138,6 +138,9 @@ local function xferData(prefix, text, distribution, sender)
   elseif data.commSpec > commSpec then
     iwtb.setStatusText("raidleader", "Newer comm spec: " .. sender)
     return
+  elseif iwtb.db.char.ignoreAll then
+    iwtb.setStatusText("raidleader", L["Ignored data. Change in options to receive data"])
+    return
   else
     if not iwtb.db.char.syncOnlyGuild or (iwtb.db.char.syncOnlyGuild and iwtb.isGuildMember(sender)) then
       dbRLRaiderCheck(sender)

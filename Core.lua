@@ -605,6 +605,7 @@ function iwtb:OnInitialize()
     char = {
         syncOnJoin = false,
         syncOnlyGuild = true,
+        ignoreAll = true,
         showOnStart = false,
         syncGuildRank = {},
         minimap = {
@@ -650,7 +651,7 @@ function iwtb:OnInitialize()
       },]]
       syncOnlyGuild = {
         name = L["Sync only with guild members"],
-        order = 3,
+        order = 5,
         desc = L["Sync only with members of your guild"],
         width = "double",
         type = "toggle",
@@ -663,9 +664,24 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.syncOnlyGuild end
       },
+      ignoreAll = {
+        name = L["Ignore all"],
+        order = 4,
+        desc = L["Ignore all data sent from raiders"],
+        width = "double",
+        type = "toggle",
+        set = function(info,val)
+                if val then 
+                  db.char.ignoreAll = true
+                else 
+                  db.char.ignoreAll = false
+                end 
+                end,              
+        get = function(info) return db.char.ignoreAll end
+      },
       showOnStart = {
         name = L["Show on start"],
-        order = 3,
+        order = 2,
         desc = L["Show on addon when UI loads"],
         width = "double",
         type = "toggle",
@@ -680,7 +696,7 @@ function iwtb:OnInitialize()
       },
       showMiniBut = {
         name = L["Hide minimap button"],
-        order = 4,
+        order = 3,
         desc = L["Hide the minimap button"],
         width = "double",
         type = "toggle",
