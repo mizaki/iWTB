@@ -1,5 +1,5 @@
 ## Interface: 70300
-## Version: 0.05
+## Version: 0.06
 ## Title: iWTB
 ## Author: jinxybob
 ## Notes: Helps organise which raider wants which boss.
