@@ -57,6 +57,12 @@ L["Show popup on kill"] = true
 L["Show a popup to change desire when boss is killed"] = true
 L["Reset kill window"] = true
 L["Reset the position of the boss kill popup window"] = true
+L["Automatically hide"] = true
+L["Automatically hide boss kill window"] = true
+L["Hide kill window after:"] = true
+L["Automatically hide boss kill window time (in secs)"] = true
+L["Enter upto three numbers, e.g. 45, 60, 120"] = true
+L["If checked, will automatically hide this window after the set interval"] = true
 
 -- Status messages
 L["Received update - "] = true
@@ -65,6 +71,7 @@ L["Sent data to raid group"] = true
 L["Need to be in a raid group"] = true
 L["Ignored non-guild member data - "] = true
 L["Ignored data. Change in options to receive data"] = true
+L["Failed to find boss name: "] = true
 
 -- Confirmation boxes
 L["Remove selected desire from ALL bosses?"] = true

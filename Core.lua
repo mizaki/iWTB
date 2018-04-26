@@ -60,7 +60,7 @@ local GUIgrpSlotSizeY = 45
 local GUIRStatusSizeX = 300 
 local GUIRStatusSizeY = 15
 local GUIkillWindowSizeX = 300
-local GUIkillWindowSizeY = 150
+local GUIkillWindowSizeY = 160
   
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
 
@@ -604,6 +604,9 @@ local function removeRaiderData(f, name)
   raidUpdate()
 end
 
+function iwtb.hideKillPopup()
+  bossKillPopup:Hide()
+end
 -- For minimap icon
 local iwtbLDB = LibStub("LibDataBroker-1.1"):NewDataObject("iwtb_icon", {
 	type = "data source",
@@ -650,6 +653,8 @@ function iwtb:OnInitialize()
         syncGuildRank = {},
         showTutorial = true,
         showPopup = true,
+        autohideKillpopup = true,
+        autohideKillTime = 60,
         killPopup = {
           anc = "RIGHT",
           x = -111,
@@ -763,7 +768,7 @@ function iwtb:OnInitialize()
       },
       showPopup = {
         name = L["Show popup on kill"],
-        order = 4,
+        order = 5,
         desc = L["Show a popup to change desire when boss is killed"],
         width = "double",
         type = "toggle",
@@ -776,20 +781,51 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.showPopup end
       },
+      autohideKillpopup = {
+        name = L["Automatically hide boss kill window"],
+        order = 6,
+        desc = L["If checked, will automatically hide this window after the set interval"],
+        width = "double",
+        type = "toggle",
+        set = function(info,val)
+                if val then 
+                  db.char.autohideKillpopup = true
+                else 
+                  db.char.autohideKillpopup = false
+                end 
+                end,              
+        get = function(info) return db.char.autohideKillpopup end
+      },
+      autohideKillTime = {
+        name = L["Hide kill window after:"],
+        order = 7,
+        width = 1,
+        min = 15,
+        max = 300,
+        step = 1,
+        desc = L["Automatically hide boss kill window time (in secs)"],
+        type = "range",
+        set = function(info,val)
+                if val then 
+                  db.char.autohideKillTime = val
+                end 
+              end,              
+        get = function(info) return db.char.autohideKillTime end
+      },
       resetPopup = {
         name = L["Reset kill window"],
-        order = 5,
+        order = 8,
         desc = L["Reset the position of the boss kill popup window"],
         type = "execute",
         func = function()
           db.char.killPopup = {anc = "RIGHT", x = -111, y = -140}
           bossKillPopup:ClearAllPoints()
           bossKillPopup:SetPoint("RIGHT", -111, -140)
-        end,
+        end
       },
       showMiniBut = {
         name = L["Hide minimap button"],
-        order = 5,
+        order = 3,
         desc = L["Hide the minimap button"],
         width = "double",
         type = "toggle",
@@ -1197,7 +1233,9 @@ function iwtb:OnEnable()
   
   -- BOSS_KILL
   local function bossKilled(e, id, name)
-    local curInst = EJ_GetCurrentInstance() -- 946
+    local curInst = EJ_GetCurrentInstance() -- 946, antorus
+    --for testing
+    if curInst == 0 then curInst = 946 end
     
     local function raidIdToExpacId(raidid)
       for k,v in pairs(raidsInfo) do
@@ -1214,33 +1252,40 @@ function iwtb:OnEnable()
           return bossid
         end
       end
+      iwtb.setStatusText("raider", L["Failed to find boss name: "] .. tostring(name))
+      return 0
     end
     local idofboss = tostring(killIdToEncounterId(id))
     
-    local function bossDesire(bossid)
-      if raiderDB.char.expac[curExpac].tier[curInst].bosses ~= nil
-      and raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss] ~=nil then
-        bossKillPopupSelectedDesireId = raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
-        return raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
-      else
-        return 0
+    if idofboss ~= "0" then
+      local function bossDesire(bossid)
+        if raiderDB.char.expac[curExpac].tier[curInst].bosses ~= nil
+        and raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss] ~=nil then
+          bossKillPopupSelectedDesireId = raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+          return raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+        else
+          return 0
+        end
       end
+      local desireofboss = bossDesire(idofboss)
+      print(desireofboss)
+      
+      local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, tonumber(idofboss))
+      bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
+      bossKillPopup.window.image:SetTexture(bossImage)
+      bossKillPopup.window.text:SetText(name)
+      
+      bossKillInfo.bossid = idofboss
+      bossKillInfo.desireid = desireofboss
+      bossKillInfo.expacid = curExpac
+      bossKillInfo.instid = curInst
+      
+      bossKillPopup:Show()
+      bossKillWantDropDown_OnClick(bossKillPopup.desireDrop.Button, desireofboss, idofboss)
+      
+      -- Start timer to hide popup window
+      self:ScheduleTimer("hideKillPopup", 15)
     end
-    local desireofboss = bossDesire(idofboss)
-    print(desireofboss)
-    
-    local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, tonumber(idofboss))
-    bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
-    bossKillPopup.window.image:SetTexture(bossImage)
-    bossKillPopup.window.text:SetText(name)
-    
-    bossKillInfo.bossid = idofboss
-    bossKillInfo.desireid = desireofboss
-    bossKillInfo.expacid = curExpac
-    bossKillInfo.instid = curInst
-    
-    bossKillPopup:Show()
-    bossKillWantDropDown_OnClick(bossKillPopup.desireDrop.Button, desireofboss, idofboss)
   end
   
   -- Raid welcome
@@ -1497,8 +1542,9 @@ function iwtb:OnEnable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
     --iwtb.setStatusText("raider", "Testing")
-    --bossKilled("BOSS_KILL", 2070, "Antoran High Command")
-    bossKillPopup:Show()
+    bossKilled("BOSS_KILL", 2070, "Kin'garoth")
+    --print("autohideTime: ",db.char.autohideKillTime)
+    --bossKillPopup:Show()
   end)
   --raiderTestButton:Hide()
   
@@ -1995,14 +2041,14 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0,0,0,0.7)
   
   fontstring = bossKillPopupWindow:CreateFontString("iwtbkillpopuptitletext")
-  fontstring:SetPoint("BOTTOMLEFT", 25, 50)
+  fontstring:SetPoint("BOTTOMLEFT", 19, 70)
   fontstring:SetFontObject("Game15Font")
   fontstring:SetTextColor(1, 1, 1, 0.8)
   fontstring:SetText("test")
   bossKillPopupWindow.text = fontstring
   
   local creatureTex = bossKillPopupWindow:CreateTexture("iwtbkillpopupimagetex")
-  creatureTex:SetPoint("TOPLEFT", 20, -10)
+  creatureTex:SetPoint("TOPLEFT", 15, -5)
   creatureTex:SetTexCoord(0, 1, 0, 0.99)
   creatureTex:SetDrawLayer("ARTWORK",7)
   creatureTex:SetTexture("Interface\\EncounterJournal\\UI-EJ-BOSS-Default")
@@ -2027,7 +2073,7 @@ function iwtb:OnEnable()
   bossKillPopupClose:SetWidth(GUItabButtonSizeX)
   bossKillPopupClose:SetHeight(GUItabButtonSizeY)
   bossKillPopupClose:SetText(L["Close"])
-  bossKillPopupClose:SetPoint("BOTTOMLEFT", 20, 10)
+  bossKillPopupClose:SetPoint("BOTTOMLEFT", 15, 33)
   texture = bossKillPopupClose:CreateTexture("killclosebuttex")
   texture:SetAllPoints(bossKillPopupClose)
   bossKillPopupClose:Enable()
@@ -2060,7 +2106,7 @@ function iwtb:OnEnable()
   bossKillPopupSend:SetWidth(GUItabButtonSizeX)
   bossKillPopupSend:SetHeight(GUItabButtonSizeY)
   bossKillPopupSend:SetText(L["Save & Send"])
-  bossKillPopupSend:SetPoint("BOTTOMRIGHT", -20, 10)
+  bossKillPopupSend:SetPoint("BOTTOMRIGHT", -15, 33)
   texture = bossKillPopupSend:CreateTexture("killtestbuttex")
   texture:SetAllPoints(bossKillPopupSend)
   bossKillPopupSend:Enable()
@@ -2081,13 +2127,26 @@ function iwtb:OnEnable()
     bossKillPopup:Hide()
   end)
   
+  -- Dropdown
   local bossKillPopupDesireDrop = CreateFrame("Frame", "bosskillpopupdesiredrop", bossKillPopupWindow, "L_UIDropDownMenuTemplate")
-  bossKillPopupDesireDrop:SetPoint("TOPRIGHT", -10, -46)
+  bossKillPopupDesireDrop:SetPoint("TOPRIGHT", -10, -42)
   L_UIDropDownMenu_SetWidth(bossKillPopupDesireDrop, 100)
   L_UIDropDownMenu_Initialize(bossKillPopupDesireDrop, bossKillWantDropDown_Menu)
   L_UIDropDownMenu_SetText(bossKillPopupDesireDrop, L["Select desirability"])
   
   bossKillPopup.desireDrop = bossKillPopupDesireDrop
+  
+  -- Auto close tick box
+  bossKillPopupButton = CreateFrame("CheckButton", "iwtbkillcheckbutton", bossKillPopupWindow, "ChatConfigCheckButtonTemplate")
+  bossKillPopupButton:SetPoint("BOTTOMLEFT", 15, 5)
+  bossKillPopupButton:SetChecked(db.char.autohideKillpopup)
+  iwtbkillcheckbuttonText:SetText(L["Automatically hide"])
+  bossKillPopupButton.tooltip = L["If checked, will automatically hide this window after the set interval"]
+  bossKillPopupButton:SetScript("OnClick", 
+    function(s)
+      if not s:GetChecked() then db.char.autohideKillpopup = false else db.char.autohideKillpopup = true end
+    end
+  )
   
   bossKillPopup:Hide()
   
