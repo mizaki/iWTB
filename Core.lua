@@ -652,8 +652,8 @@ function iwtb:OnInitialize()
         showPopup = true,
         killPopup = {
           anc = "RIGHT",
-          x = -80,
-          y = -220,
+          x = -111,
+          y = -140,
         },
         minimap = {
           hide = false,
@@ -676,9 +676,14 @@ function iwtb:OnInitialize()
   options = {
     type = "group",
     args = {
-      settingsHeader = {
-        name = "Settings",
+      settingsHeaderGUI = {
+        name = L["GUI"],
         order = 1,
+        type = "header",
+      },
+      settingsHeaderData = {
+        name = L["Data"],
+        order = 10,
         type = "header",
       },
       --[[syncOnJoin = { -- TODO
@@ -698,7 +703,7 @@ function iwtb:OnInitialize()
       },]]
       showTutorial = {
         name = L["Show tutorial window"],
-        order = 6,
+        order = 2,
         desc = L["Show the tutorial window when first opened"],
         width = "double",
         type = "toggle",
@@ -713,7 +718,7 @@ function iwtb:OnInitialize()
       },
       syncOnlyGuild = {
         name = L["Sync only with guild members"],
-        order = 5,
+        order = 12,
         desc = L["Sync only with members of your guild"],
         width = "double",
         type = "toggle",
@@ -728,7 +733,7 @@ function iwtb:OnInitialize()
       },
       ignoreAll = {
         name = L["Ignore all"],
-        order = 4,
+        order = 11,
         desc = L["Ignore all data sent from raiders"],
         width = "double",
         type = "toggle",
@@ -743,7 +748,7 @@ function iwtb:OnInitialize()
       },
       showOnStart = {
         name = L["Show on start"],
-        order = 2,
+        order = 3,
         desc = L["Show on addon when UI loads"],
         width = "double",
         type = "toggle",
@@ -758,7 +763,7 @@ function iwtb:OnInitialize()
       },
       showPopup = {
         name = L["Show popup on kill"],
-        order = 7,
+        order = 4,
         desc = L["Show a popup to change desire when boss is killed"],
         width = "double",
         type = "toggle",
@@ -771,9 +776,20 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.showPopup end
       },
+      resetPopup = {
+        name = L["Reset kill window"],
+        order = 5,
+        desc = L["Reset the position of the boss kill popup window"],
+        type = "execute",
+        func = function()
+          db.char.killPopup = {anc = "RIGHT", x = -111, y = -140}
+          bossKillPopup:ClearAllPoints()
+          bossKillPopup:SetPoint("RIGHT", -111, -140)
+        end,
+      },
       showMiniBut = {
         name = L["Hide minimap button"],
-        order = 3,
+        order = 5,
         desc = L["Hide the minimap button"],
         width = "double",
         type = "toggle",
@@ -1481,7 +1497,8 @@ function iwtb:OnEnable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
     --iwtb.setStatusText("raider", "Testing")
-    bossKilled("BOSS_KILL", 2070, "Antoran High Command")
+    --bossKilled("BOSS_KILL", 2070, "Antoran High Command")
+    bossKillPopup:Show()
   end)
   --raiderTestButton:Hide()
   
@@ -1951,6 +1968,7 @@ function iwtb:OnEnable()
   bossKillPopup:SetScript("OnDragStart", function(s) s:StartMoving() end)
   bossKillPopup:SetScript("OnDragStop", function(s) s:StopMovingOrSizing()
     _, _, db.char.killPopup.anc, db.char.killPopup.x, db.char.killPopup.y = s:GetPoint()
+    print(s:GetPoint())
   end)
   bossKillPopup:SetScript("OnHide", function(s) s:StopMovingOrSizing() end)
 
@@ -2023,7 +2041,7 @@ function iwtb:OnEnable()
   bossKillPopupTest:SetWidth(GUItabButtonSizeX)
   bossKillPopupTest:SetHeight(GUItabButtonSizeY)
   bossKillPopupTest:SetText("test")
-  bossKillPopupTest:SetPoint("TOPLEFT", 10, -10)
+  bossKillPopupTest:SetPoint("TOPRIGHT", 10, -10)
   texture = bossKillPopupTest:CreateTexture("killtestbuttex")
   texture:SetAllPoints(bossKillPopupTest)
   bossKillPopupTest:Enable()
@@ -2031,6 +2049,8 @@ function iwtb:OnEnable()
   bossKillPopupTest:SetScript("OnClick", function(s)
     print(bossKillInfo.bossid)
     print(bossKillPopupSelectedDesireId)
+    bossKillPopup:ClearAllPoints()
+    bossKillPopup:SetPoint("RIGHT", -80, -220)
     --buildInstances()
   end)
   bossKillPopupTest:Hide()
