@@ -9,6 +9,7 @@ local raiderDB
 local raidLeaderDB
 local rankInfo = {} -- Guild rank info
 local expacInfo = nil -- Expacs for dropdown
+local raidsInfo = nil -- RaidID = ExpacID, for use on bosskillpopup
 local tierRaidInstances = nil -- Raid instances for raider tab dropdown
 local tierRLRaidInstances = nil 
 local instanceBosses = nil -- Bosses for RL tab dropdown
@@ -19,6 +20,8 @@ local rlTab -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
 local rlRaiderListFrame -- main frame listing raiders spots
+local bossKillPopup -- Pop up frame for changing desire on boss kill
+local bossKillPopupSelectedDesireId = 0
 local grpMemFrame = {} -- table containing each frame per group
 local grpMemSlotFrame = {} -- table containing each frame per slot for each group
 local rlRaiderNotListFrame -- main frame listing raiders NOT in the raid but in the rl db
@@ -27,6 +30,7 @@ local bossFrame = {}-- table of frames containing each boss frame
 local raiderBossesStr = "" -- raider boss desire seralised
 local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
+local bossKillInfo = {bossid = 0, desireid = 0, expacid = 0, instid = 0}
 
 local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
 local rlSelectedTier = {} -- Must be a better way but cba for now.
@@ -55,6 +59,8 @@ local GUIgrpSlotSizeX = 110
 local GUIgrpSlotSizeY = 45
 local GUIRStatusSizeX = 300 
 local GUIRStatusSizeY = 15
+local GUIkillWindowSizeX = 300
+local GUIkillWindowSizeY = 150
   
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
 
@@ -65,6 +71,7 @@ local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.32812
 local function print_table(node)
     if type(node) ~= "table" then
       print("print_table called on non-table")
+      print(node)
       return
     end
 
@@ -223,6 +230,39 @@ local function getInstances(expacID, isRL)
       if i == 50 then finished = true end
     end
   until finished
+end
+
+-- Build raids per expansion
+local function buildInstances()
+  if ( not EncounterJournal ) then
+    EncounterJournal_LoadUI()
+  end
+  
+  local fullRaidInstances = {}
+  
+  for n=1, EJ_GetNumTiers() do
+    EJ_SelectTier(n)
+    local i = 1
+    local raidCounter = 1
+    local finished = false
+    
+    repeat
+      local instanceInfoID = EJ_GetInstanceByIndex(i,true)  -- First return is instance ID
+      if instanceInfoID == nil then finished = true
+      else
+        local _, _, _, _, _, _, _, _, _, isRaid = EJ_GetInstanceByIndex(i,true)
+        if isRaid then
+          table.insert(fullRaidInstances, instanceInfoID, n)
+          raidCounter = raidCounter + 1
+        end
+        i = i +1
+        -- in case of emergency, break loop
+        if i == 50 then finished = true end
+      end
+    until finished
+  end
+  
+  return fullRaidInstances
 end
 
 -- Return the bosses per raid.
@@ -609,6 +649,12 @@ function iwtb:OnInitialize()
         showOnStart = false,
         syncGuildRank = {},
         showTutorial = true,
+        showPopup = true,
+        killPopup = {
+          anc = "RIGHT",
+          x = -80,
+          y = -220,
+        },
         minimap = {
           hide = false,
         },
@@ -710,6 +756,21 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.showOnStart end
       },
+      showPopup = {
+        name = L["Show popup on kill"],
+        order = 7,
+        desc = L["Show a popup to change desire when boss is killed"],
+        width = "double",
+        type = "toggle",
+        set = function(info,val)
+                if val then 
+                  db.char.showPopup = true
+                else 
+                  db.char.showPopup = false
+                end 
+                end,              
+        get = function(info) return db.char.showPopup end
+      },
       showMiniBut = {
         name = L["Hide minimap button"],
         order = 3,
@@ -791,7 +852,13 @@ function iwtb:OnInitialize()
         raidUpdate()
       end
     else
-      LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
+      local cmd, arg = strsplit(" ", input)
+      if cmd == "debugp" then
+        print_table(instanceBosses)
+      else
+        --print("cmd: ", cmd, " arg: ", arg)
+        --LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
+      end
     end
   end
 end
@@ -802,6 +869,8 @@ function iwtb:OnEnable()
   local fontstring
   local button
   local texture
+  
+  raidsInfo = buildInstances()
   
   -- What to do when item is clicked
   local function raidsDropdownMenuOnClick(self, arg1, arg2, checked)
@@ -984,7 +1053,7 @@ function iwtb:OnEnable()
   end
   
   -- Fill menu with items
-  function raidsDropdownMenu(frame, level, menuList)
+  local function raidsDropdownMenu(frame, level, menuList)
     local info = L_UIDropDownMenu_CreateInfo()
     if frame:GetName() == "expacbutton" then
       -- Get expansions
@@ -1072,6 +1141,101 @@ function iwtb:OnEnable()
     end
   end
 
+  --------------------------------------------------------------------
+  -- KILL POPUP BOSS MENU FUNCTIONS
+  --------------------------------------------------------------------
+  
+  local function bossKillWantDropDown_OnClick(self, arg1, arg2, checked)
+    -- arg1 = desire id, arg2 = boss id
+    -- Set dropdown text to new selection
+    print("desireid:",arg1)
+    if arg1 > 0 then
+      L_UIDropDownMenu_SetSelectedID(bossKillPopup.desireDrop, arg1)
+    else
+      L_UIDropDownMenu_SetText(bossKillPopup.desireDrop, L["Select desirability"])
+    end
+    bossKillPopupSelectedDesireId = self:GetID()
+  end
+    
+  -- Fill menu with desirability list
+  local function bossKillWantDropDown_Menu(frame, level, menuList)
+    local info = L_UIDropDownMenu_CreateInfo()
+    info.func = bossKillWantDropDown_OnClick
+    for desireid, name in pairs(desire) do
+      info.text, info.arg1, info.arg2 = name, desireid, bossKillPopupSelectedBossId
+      if tonumber(bossKillInfo.bossid) > 0
+      and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses ~= nil
+      and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] ~=nil
+      and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] == desireid then
+        info.checked = true
+      else
+        info.checked = false
+      end
+      L_UIDropDownMenu_AddButton(info)
+    end
+  end
+  
+  ---------------------
+  -- Event listeners --
+  ---------------------
+  
+  -- BOSS_KILL
+  local function bossKilled(e, id, name)
+    local curInst = EJ_GetCurrentInstance() -- 946
+    
+    local function raidIdToExpacId(raidid)
+      for k,v in pairs(raidsInfo) do
+        if k == curInst then return v end
+      end
+    end
+    local curExpac = raidIdToExpacId(curInst)
+    
+    -- As I can't find a way to cross relate these ids, we're using names...
+    local function killIdToEncounterId(killid)
+      local bossList = getBosses(curInst)
+      for bossid, bossname in pairs(bossList.bosses) do
+        if bossname == name then
+          return bossid
+        end
+      end
+    end
+    local idofboss = tostring(killIdToEncounterId(id))
+    
+    local function bossDesire(bossid)
+      if raiderDB.char.expac[curExpac].tier[curInst].bosses ~= nil
+      and raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss] ~=nil then
+        bossKillPopupSelectedDesireId = raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+        return raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+      else
+        return 0
+      end
+    end
+    local desireofboss = bossDesire(idofboss)
+    print(desireofboss)
+    
+    local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, tonumber(idofboss))
+    bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
+    bossKillPopup.window.image:SetTexture(bossImage)
+    bossKillPopup.window.text:SetText(name)
+    
+    bossKillInfo.bossid = idofboss
+    bossKillInfo.desireid = desireofboss
+    bossKillInfo.expacid = curExpac
+    bossKillInfo.instid = curInst
+    
+    bossKillPopup:Show()
+    bossKillWantDropDown_OnClick(bossKillPopup.desireDrop.Button, desireofboss, idofboss)
+  end
+  
+  -- Raid welcome
+  local function enterInstance(e, name)
+    print(GetRaidDifficultyID())
+    if db.char.showPopup then
+      print("BOSS_KILL listening")
+      iwtb:RegisterEvent("BOSS_KILL", bossKilled)
+    end
+  end
+  
   -----------------------------------
   -- SLOT MENU
   -----------------------------------
@@ -1125,6 +1289,7 @@ function iwtb:OnEnable()
   windowframe:SetPoint("CENTER", 0, 0)
   windowframe:SetFrameStrata("DIALOG")
   windowframe:SetMovable(true)
+  
   --tinsert(UISpecialFrames,"iwtbwindow")
 
   windowframetexture = windowframe:CreateTexture("iwtbframetexture")
@@ -1169,6 +1334,8 @@ function iwtb:OnEnable()
     windowframe.title:Hide()
   end)
   
+  --tinsert(UISpecialFrames,"title")
+  
   -- Tabs
   
   -- Tutorial frame
@@ -1185,10 +1352,6 @@ function iwtb:OnEnable()
   tutorialHTML:SetWidth(GUItabWindowSizeX-100)
   tutorialHTML:SetHeight(GUItabWindowSizeY-100)
   tutorialHTML:SetPoint("CENTER", 0, 0)
-  --tutorialHTML:SetFrameStrata("FULLSCREEN")
-  --[[texture = tutorialHTML:CreateTexture("iwtbtutorialtex")
-  texture:SetAllPoints(tutorialHTML)
-  texture:SetColorTexture(0,0,0,1)]]
   tutorialHTML:SetFontObject("Game12Font")
   tutorialHTML:SetFontObject('h1', Game20Font)
   tutorialHTML:SetFontObject('h2', Game18Font)
@@ -1311,15 +1474,16 @@ function iwtb:OnEnable()
   raiderTestButton:SetHeight(GUItabButtonSizeY)
   raiderTestButton:SetText("Test")
   raiderTestButton:SetFrameLevel(5)
-  raiderTestButton:SetPoint("BOTTOMLEFT", 130, 30)
+  raiderTestButton:SetPoint("BOTTOMLEFT", 270, 30)
   texture = raiderTestButton:CreateTexture("raidertestbuttex")
   texture:SetAllPoints(raiderTestButton)
   raiderTestButton:Enable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
-    iwtb.setStatusText("raider", "Testing")
+    --iwtb.setStatusText("raider", "Testing")
+    bossKilled("BOSS_KILL", 2070, "Antoran High Command")
   end)
-  raiderTestButton:Hide()
+  --raiderTestButton:Hide()
   
   -- Raider close button
   local raiderCloseButton = CreateFrame("Button", "iwtbraiderclosebutton", raiderTab, "UIPanelButtonTemplate")
@@ -1772,7 +1936,144 @@ function iwtb:OnEnable()
     InterfaceOptionsFrame_OpenToCategory("iWTB")
   end)
   
+  -------------------------
+  -- Kill boss window popup
+  -------------------------
+  
+  bossKillPopup = CreateFrame("Frame", "iwtbkillpopup", UIParent)
+  bossKillPopup:SetWidth(GUIkillWindowSizeX)
+  bossKillPopup:SetHeight(23)
+  bossKillPopup:SetPoint(db.char.killPopup.anc, db.char.killPopup.x, db.char.killPopup.y)
+  bossKillPopup:SetFrameStrata("DIALOG")
+  bossKillPopup:EnableMouse(true)
+  bossKillPopup:SetMovable(true)
+  bossKillPopup:RegisterForDrag("LeftButton")
+  bossKillPopup:SetScript("OnDragStart", function(s) s:StartMoving() end)
+  bossKillPopup:SetScript("OnDragStop", function(s) s:StopMovingOrSizing()
+    _, _, db.char.killPopup.anc, db.char.killPopup.x, db.char.killPopup.y = s:GetPoint()
+  end)
+  bossKillPopup:SetScript("OnHide", function(s) s:StopMovingOrSizing() end)
+
+  texture = bossKillPopup:CreateTexture("iwtbbosskillpopuptex")
+  texture:SetAllPoints(bossKillPopup)
+  texture:SetColorTexture(0,0,0,1)
+  
+  fontstring = bossKillPopup:CreateFontString("iwtbkillpopuptitletext")
+  fontstring:SetPoint("LEFT", 10, 0)
+  fontstring:SetFontObject("Game15Font")
+  fontstring:SetTextColor(1, 1, 1, 0.8)
+  fontstring:SetText(L["Boss killed!"])
+  bossKillPopup.text = fontstring
+  
+  -- window frame
+  local bossKillPopupWindow = CreateFrame("Frame", "iwtbkillpopupwindow", bossKillPopup)
+  bossKillPopupWindow:SetWidth(GUIkillWindowSizeX)
+  bossKillPopupWindow:SetHeight(GUIkillWindowSizeY)
+  bossKillPopupWindow:SetPoint("TOP", 0, -23)
+  bossKillPopupWindow:SetFrameStrata("DIALOG")
+  
+  texture = bossKillPopupWindow:CreateTexture("iwtbbossKillPopupWindowtex")
+  texture:SetAllPoints(bossKillPopupWindow)
+  texture:SetColorTexture(0,0,0,0.7)
+  
+  fontstring = bossKillPopupWindow:CreateFontString("iwtbkillpopuptitletext")
+  fontstring:SetPoint("BOTTOMLEFT", 25, 50)
+  fontstring:SetFontObject("Game15Font")
+  fontstring:SetTextColor(1, 1, 1, 0.8)
+  fontstring:SetText("test")
+  bossKillPopupWindow.text = fontstring
+  
+  local creatureTex = bossKillPopupWindow:CreateTexture("iwtbkillpopupimagetex")
+  creatureTex:SetPoint("TOPLEFT", 20, -10)
+  creatureTex:SetTexCoord(0, 1, 0, 0.99)
+  creatureTex:SetDrawLayer("ARTWORK",7)
+  creatureTex:SetTexture("Interface\\EncounterJournal\\UI-EJ-BOSS-Default")
+  
+  bossKillPopupWindow.image = creatureTex
+  
+  bossKillPopup.window = bossKillPopupWindow
+  
+  -- close X button
+  button = CreateFrame("Button", "iwtbkillpopupexit", bossKillPopup, "UIPanelCloseButton")
+  button:SetWidth(40)
+  button:SetHeight(40)
+  button:SetPoint("TOPRIGHT", 9, 9)
+  button:Enable()
+  button:RegisterForClicks("LeftButtonUp")
+  button:SetScript("OnClick", function(s)
+    bossKillPopup:Hide()
+  end)
+  
+  -- Kill popup close button
+  local bossKillPopupClose = CreateFrame("Button", "iwtbbosskillpopupclose", bossKillPopupWindow, "UIPanelButtonTemplate")
+  bossKillPopupClose:SetWidth(GUItabButtonSizeX)
+  bossKillPopupClose:SetHeight(GUItabButtonSizeY)
+  bossKillPopupClose:SetText(L["Close"])
+  bossKillPopupClose:SetPoint("BOTTOMLEFT", 20, 10)
+  texture = bossKillPopupClose:CreateTexture("killclosebuttex")
+  texture:SetAllPoints(bossKillPopupClose)
+  bossKillPopupClose:Enable()
+  bossKillPopupClose:RegisterForClicks("LeftButtonUp")
+  bossKillPopupClose:SetScript("OnClick", function(s)
+    bossKillPopup:Hide()
+  end)
+  
+  -- Kill popup test button
+  local bossKillPopupTest = CreateFrame("Button", "iwtbbosskillpopuptest", bossKillPopupWindow, "UIPanelButtonTemplate")
+  bossKillPopupTest:SetWidth(GUItabButtonSizeX)
+  bossKillPopupTest:SetHeight(GUItabButtonSizeY)
+  bossKillPopupTest:SetText("test")
+  bossKillPopupTest:SetPoint("TOPLEFT", 10, -10)
+  texture = bossKillPopupTest:CreateTexture("killtestbuttex")
+  texture:SetAllPoints(bossKillPopupTest)
+  bossKillPopupTest:Enable()
+  bossKillPopupTest:RegisterForClicks("LeftButtonUp")
+  bossKillPopupTest:SetScript("OnClick", function(s)
+    print(bossKillInfo.bossid)
+    print(bossKillPopupSelectedDesireId)
+    --buildInstances()
+  end)
+  bossKillPopupTest:Hide()
+  
+  -- Kill popup save and send button
+  local bossKillPopupSend = CreateFrame("Button", "iwtbbossKillPopupSend", bossKillPopupWindow, "UIPanelButtonTemplate")
+  bossKillPopupSend:SetWidth(GUItabButtonSizeX)
+  bossKillPopupSend:SetHeight(GUItabButtonSizeY)
+  bossKillPopupSend:SetText(L["Save & Send"])
+  bossKillPopupSend:SetPoint("BOTTOMRIGHT", -20, 10)
+  texture = bossKillPopupSend:CreateTexture("killtestbuttex")
+  texture:SetAllPoints(bossKillPopupSend)
+  bossKillPopupSend:Enable()
+  bossKillPopupSend:RegisterForClicks("LeftButtonUp")
+  bossKillPopupSend:SetScript("OnClick", function(s)
+    if bossKillPopupSelectedDesireId > 0 then
+      raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] = bossKillPopupSelectedDesireId
+      L_UIDropDownMenu_SetSelectedID(bossFrame[bossKillInfo.bossid].dropdown, bossKillPopupSelectedDesireId)
+      raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.expac)
+      -- Send current desire list to raid
+      if not IsInRaid() then
+        iwtb.setStatusText("raider", L["Need to be in a raid group"])
+      else
+        iwtb.sendData("udata", raiderDB.char, "raid")
+        iwtb.setStatusText("raider", L["Sent data to raid group"])
+      end
+    end
+    bossKillPopup:Hide()
+  end)
+  
+  local bossKillPopupDesireDrop = CreateFrame("Frame", "bosskillpopupdesiredrop", bossKillPopupWindow, "L_UIDropDownMenuTemplate")
+  bossKillPopupDesireDrop:SetPoint("TOPRIGHT", -10, -46)
+  L_UIDropDownMenu_SetWidth(bossKillPopupDesireDrop, 100)
+  L_UIDropDownMenu_Initialize(bossKillPopupDesireDrop, bossKillWantDropDown_Menu)
+  L_UIDropDownMenu_SetText(bossKillPopupDesireDrop, L["Select desirability"])
+  
+  bossKillPopup.desireDrop = bossKillPopupDesireDrop
+  
+  bossKillPopup:Hide()
+  
+  ----------------
   -- Register tabs
+  ----------------
   PanelTemplates_SetNumTabs(windowframe, 3)  -- 2 because there are 2 frames total.
   PanelTemplates_SetTab(windowframe, 1)     -- 1 because we want tab 1 selected.
   raiderTab:Show()  -- Show page 1.
@@ -1796,6 +2097,40 @@ function iwtb:OnEnable()
   
   -- Register listening events
   iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", raidUpdate)
+  iwtb:RegisterEvent("RAID_INSTANCE_WELCOME", enterInstance)
+  
+  
+  local function eventfired(e, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
+    if e == "COMBAT_LOG_EVENT_UNFILTERED" then
+      if arg2 == "UNIT_DIED" then
+        print(arg1,arg2,arg3,arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
+        local _, _, _, _, _, id = strsplit("-", arg8)
+        print("mobid?: ", id)
+      end
+    elseif e == "CHAT_MSG_LOOT" then
+      print(arg1,"arg2:",arg2)
+      --print("arg2:" ,arg2, "arg3:",arg3, "arg4:",arg4, "arg5:",arg5, "arg6:",arg6)
+      print("name: ",arg5)
+	elseif e == "ENCOUNTER_END" then
+      print(e, "name: ", arg2, " id: ", arg1, " diff: ", arg3, " status: ", arg5)
+    else
+      print(e, arg1)
+      print("arg2:" ,arg2, "arg3:",arg3, "arg4:",arg4, "arg5:",arg5, "arg6:",arg6)
+      print("arg7:" ,arg7, "arg8:",arg8, "arg9:",arg9, "arg10:",arg10, "arg11:",arg11)
+    end
+  end
+  
+  --iwtb:RegisterEvent("EJ_LOOT_DATA_RECIEVED", eventfired)
+  iwtb:RegisterEvent("GROUP_LEFT", eventfired)
+  --iwtb:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", eventfired)
+  --iwtb:RegisterEvent("ENCOUNTER_LOOT_RECEIVED", eventfired)
+  --iwtb:RegisterEvent("ITEM_PUSH", eventfired)
+  
+  -- Check if we are in a raid (having /reload etc.)
+  local inInstance, instanceType = IsInInstance()
+  if inInstance and instanceType == "raid" then
+    enterInstance("RAID_INSTANCE_WELCOME", "Unknown")
+  end
 end
 
 function iwtb:OnDisable()

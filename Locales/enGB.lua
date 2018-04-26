@@ -15,6 +15,7 @@ L["Select raid"] = true
 L["Select boss"] = true
 L["Select desirability"] = true
 L["Send"] = true
+L["Save & Send"] = true
 L["Empty"] = true
 L["Unknown desire"] = true
 L["Reset DB"] = true
@@ -31,6 +32,7 @@ L["Close"] = true
 L["Tutorial"] = true
 L["Options"] = true
 L["Out of raid players"] = true
+L["Boss killed!"] = true
 
 -- Options
 L["Request an update from a player when they join the raid"] = true
@@ -49,6 +51,8 @@ L["Copy desire data"] = true
 L["Copy desire data from one character to another"] = true
 L["Show tutorial window"] = true
 L["Show the tutorial window when first opened"] = true
+L["Show popup on kill"] = true
+L["Show a popup to change desire when boss is killed"] = true
 
 -- Status messages
 L["Received update - "] = true
