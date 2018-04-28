@@ -5,7 +5,7 @@ local Compressor = LibStub("LibCompress")
 local Encoder = Compressor:GetAddonEncodeTable()
 local L = iwtb.L
 
-local commSpec = 1 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
+local commSpec = 2 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
 
 local function printTable(table)
   if type(table) == "table" then
@@ -117,19 +117,20 @@ end
 ------------------------------------
 
 local function dbRLRaiderCheck(raider, expac, tier)
-  if iwtb.raidLeaderDB.char.raiders[raider] == nil then
+  -- Depreciated (most likely removed for release)
+  --[[if iwtb.raidLeaderDB.char.raiders[raider] == nil then
     iwtb.raidLeaderDB.char.raiders[raider] = {}
     iwtb.raidLeaderDB.char.raiders[raider].bossListHash = ""
+  end]]
+  if iwtb.rlProfileDB.profile.raiders[raider] == nil then
+    iwtb.rlProfileDB.profile.raiders[raider] = {}
+    iwtb.rlProfileDB.profile.raiders[raider].bossListHash = ""
   end
-  -- Below is for when we update only say an expac, tier or boss (if enabling loot item selection). For now we just send the whole lot!
-  --[[if iwtb.raidLeaderDB.raiders[raider].expac[expac] == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac] = {} end
-  if iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier] == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier] = {} end
-  if iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier].bosses == nil then iwtb.raidLeaderDB.raiders[raider].expac[expac].tier[tier].bosses = {} end]]
 end
 
 -- new data from raider
 local function xferData(prefix, text, distribution, sender)
-  -- Do some check if we care about data. Requires promoted? In raid? Have an option to ignore all data?
+  -- Do some check if we care about data. Requires promoted?
   local success, data = iwtb.decodeData(text)
   
   if data.commSpec == nil or data.commSpec < commSpec then
@@ -144,8 +145,10 @@ local function xferData(prefix, text, distribution, sender)
   else
     if not iwtb.db.char.syncOnlyGuild or (iwtb.db.char.syncOnlyGuild and iwtb.isGuildMember(sender)) then
       dbRLRaiderCheck(sender)
-      iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
-      iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
+      --iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
+      iwtb.rlProfileDB.profile.raiders[sender].raids = data.raids
+      iwtb.rlProfileDB.profile.raiders[sender].bossListHash = iwtb.hashData(data.raids)
+      --iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
       iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
     else
       iwtb.setStatusText("raidleader", L["Ignored non-guild member data - "] .. sender)
@@ -173,7 +176,7 @@ local function xferHash(prefix, text, distribution, sender)
   --print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.raidLeaderDB.char.raiders[sender].bossListHash))
   
   -- Temp statement for testing
-  if text ~= iwtb.raidLeaderDB.char.raiders[sender].bossListHash then
+  if text ~= iwtb.rlProfileDB.profile.raiders[sender].bossListHash then
   -- Final statement if RL sends (may change)
   --if text ~= iwtb.raiderDB.char.bossListHash then
     -- Send current boss list

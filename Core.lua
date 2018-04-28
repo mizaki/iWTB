@@ -232,6 +232,7 @@ local function getInstances(expacID, isRL)
   until finished
 end
 
+-- Depreciated? (most likely removed for release)
 -- Build raids per expansion
 local function buildInstances()
   if ( not EncounterJournal ) then
@@ -298,6 +299,7 @@ local function getBosses(raidID, isRL)
   end
 end
 
+-- Depreciated (most likely removed for release)
 local function dbSchemaCheck(level, expac)
   if level == "expacs" then
     if expacInfo == nil then getExpansions() end
@@ -488,7 +490,7 @@ end
 
 local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss
   -- First check if the player is in rl db
-  for tname, rldb in pairs(raidLeaderDB.char.raiders) do
+  --[[for tname, rldb in pairs(raidLeaderDB.char.raiders) do
     if tname == name and rldb.expac ~= nil then
       for expacid,expacs in pairs(rldb.expac) do -- can convert
         if expacid == expac then
@@ -498,6 +500,21 @@ local function hasDesire(name, expac, tier, boss) -- compare the player name to 
                 if bossid == boss then
                   return desire
                 end
+              end
+            end
+          end
+        end
+      end
+    end
+  end]]
+  for tname, rldb in pairs(rlProfileDB.profile.raiders) do
+    if tname == name and rldb.raids ~= nil then
+      for tierid, tiers in pairs(rldb.raids) do
+        if tierid == tier then
+          for bossid, bosses in pairs(tiers) do
+            if bossid == boss then
+              for desire, desireid in pairs(bosses) do
+                return desireid
               end
             end
           end
@@ -531,7 +548,8 @@ local function raidUpdate(self)
   local found = false
   local n = 1
   local ooRCount = 0
-  for rldbName,v in pairs(raidLeaderDB.char.raiders) do -- can convert
+  --for rldbName,v in pairs(raidLeaderDB.char.raiders) do -- can convert
+  for rldbName,v in pairs(rlProfileDB.profile.raiders) do -- can convert
     found = false
     n = 1
     while GetRaidRosterInfo(n) do
@@ -599,9 +617,64 @@ function iwtb.setStatusText(f, text)
 end
 
 local function removeRaiderData(f, name)
-  raidLeaderDB.char.raiders[name] = nil
+  --raidLeaderDB.char.raiders[name] = nil
+  rlProfileDB.profile.raiders[name] = nil
   iwtb.setStatusText("raidleader", L["Removed data - "] .. name)
   raidUpdate()
+end
+
+function iwtb.convertDB(dbname)
+  if dbname == "raider" then
+    if raiderDB.char.raids == nil then raiderDB.char.raids = {} end
+    wipe(raiderDB.char.raids)
+    -- move all raidids to raiderDB.raids from raiderDB.expac.tier
+    for expacid, expac in pairs (raiderDB.char.expac) do
+      for kt,tier in pairs(expac) do
+        --print_table(tierid)
+        for raidid, bosses in pairs(tier) do
+          --print_table(bossid)
+          for kb, boss in pairs(bosses) do
+            for bossid, desireid in pairs(boss) do
+              --print_table(desireid)
+              print("expac: ", expacid, " raidid: ", raidid, " bossid: ", bossid, "desireid: ", desireid)
+              if raiderDB.char.raids[raidid] == nil then raiderDB.char.raids[raidid] = {} end
+              if raiderDB.char.raids[raidid][bossid] == nil then
+                raiderDB.char.raids[raidid][bossid] = {}
+                raiderDB.char.raids[raidid][bossid]["desireid"] = desireid
+              end
+            end
+          end
+        end
+      end
+    end
+  elseif dbname == "rl" then
+    if rlProfileDB.profile.raiders == nil then rlProfileDB.profile.raiders = {} end
+    wipe(rlProfileDB.profile.raiders)
+    -- move all raiders raidids to raiderDB.raids from raiderDB.expac.tier
+    for raider, data in pairs(iwtb.raidLeaderDB.char.raiders) do
+      for expacid, expac in pairs (data.expac) do
+        for kt,tier in pairs(expac) do
+          --print_table(tierid)
+          for raidid, bosses in pairs(tier) do
+            --print_table(bossid)
+            for kb, boss in pairs(bosses) do
+              for bossid, desireid in pairs(boss) do
+                --print_table(desireid)
+                print("raider: ", raider, "expac: ", expacid, " raidid: ", raidid, " bossid: ", bossid, "desireid: ", desireid)
+                if rlProfileDB.profile.raiders[raider] == nil then rlProfileDB.profile.raiders[raider] = {} end
+                if rlProfileDB.profile.raiders[raider].raids == nil then rlProfileDB.profile.raiders[raider].raids = {} end
+                if rlProfileDB.profile.raiders[raider].raids[raidid] == nil then rlProfileDB.profile.raiders[raider].raids[raidid] = {} end
+                if rlProfileDB.profile.raiders[raider].raids[raidid][bossid] == nil then
+                  rlProfileDB.profile.raiders[raider].raids[raidid][bossid] = {}
+                  rlProfileDB.profile.raiders[raider].raids[raidid][bossid]["desireid"] = desireid
+                end
+              end
+            end
+          end
+        end
+      end
+    end
+  end
 end
 
 function iwtb.hideKillPopup()
@@ -630,15 +703,27 @@ local iwtbIcon = LibStub("LibDBIcon-1.0")
 ---------------------------------
 function iwtb:OnInitialize()
 ---------------------------------
+  
   local raiderDefaults = {
     char = {
-      expac = {},
-      bossListHash = "", -- this is the hash of all bosses to be sent for comparison with the RL data
+      expac = {}, -- Depreciated (most likely removed for release)
+      raids = {}, -- [raidid][desire] = n, [raidid][note] = text (plus possible later additions)
+      bossListHash = "", -- this is the hash of all boss desires to be sent for comparison with the RL data (once implemented)
     },
   }
   
+  -- Depreciated (most likely removed for release)
   local raidLeaderDefaults = { -- for future - boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
     char = {
+      raiders = {},
+    },
+  }
+  
+  ----------------
+  -- Profile DB --
+  ----------------
+  local rlProfileDefaults = { -- for future - boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
+    profile = {
       raiders = {},
     },
   }
@@ -670,8 +755,14 @@ function iwtb:OnInitialize()
   db = self.db
   iwtb.raiderDB = LibStub("AceDB-3.0"):New("iWTBRaiderDB", raiderDefaults)
   raiderDB = self.raiderDB
+  
+  -- Depreciated (most likely removed for release)
   iwtb.raidLeaderDB = LibStub("AceDB-3.0"):New("iWTBRaidLeaderDB", raidLeaderDefaults)
   raidLeaderDB = self.raidLeaderDB
+  
+
+  iwtb.rlProfileDB = LibStub("AceDB-3.0"):New("iWTBrlProfileDB", rlProfileDefaults)
+  rlProfileDB = self.rlProfileDB
   
 	iwtbIcon:Register("iwtb_icon", iwtbLDB, db.char.minimap)
   
@@ -906,13 +997,33 @@ function iwtb:OnInitialize()
     else
       local cmd, arg = strsplit(" ", input)
       if cmd == "debugp" then
-        print_table(instanceBosses)
+        --print_table(raiderDB.char.raids[raiderSelectedTier.instid]["1992"])
+        iwtb.convertDB("rl")
+      elseif cmd == "debugr" then
+        print_table(raiderDB.char.raids)
+      elseif cmd == "debugo" then
+        print_table(raidLeaderDB.char.raiders)
+      elseif cmd == "debugn" then
+        print_table(rlProfileDB.profile.raiders)
+      elseif cmd == "debugh" then
+        
       else
         --print("cmd: ", cmd, " arg: ", arg)
         --LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
       end
     end
   end
+  
+  -------------------------------------------------------------
+  -- Move old data layout to new. [raidid][bossid]["desireid"]
+  -------------------------------------------------------------
+  --wipe(raiderDB.char.raids)
+  if next(raiderDB.char.raids) == nil then iwtb.convertDB("raider") end
+  
+  -------------------------------------------------------------
+  -- Move old data layout to new and profile. [profile][raiders][raider][raidid][bossid]["desireid"]
+  -------------------------------------------------------------
+  if next(rlProfileDB.profile.raiders) == nil then iwtb.convertDB("rl") end
 end
 
 function iwtb:OnEnable()
@@ -1034,9 +1145,11 @@ function iwtb:OnEnable()
             L_UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
             bossFrame[idofboss].dropdown = bossWantdropdown
             
-            if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
-            and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~= nil then
-              L_UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss]])
+            --if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
+            --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~= nil then
+            if raiderDB.char.raids[raiderSelectedTier.instid] ~= nil
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~= nil then
+              L_UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid])
             else
               L_UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
             end
@@ -1164,7 +1277,8 @@ function iwtb:OnEnable()
   local function bossWantDropDown_OnClick(self, arg1, arg2, checked)
     -- arg1 = desire id, arg2 = boss id
     -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
-    raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
+    --old data layout - raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
+    raiderDB.char.raids[raiderSelectedTier.instid][arg2].desireid = arg1
     -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
     --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
     
@@ -1172,7 +1286,7 @@ function iwtb:OnEnable()
     L_UIDropDownMenu_SetSelectedID(bossFrame[arg2].dropdown, self:GetID())
     
     -- Update hash
-    raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.expac) -- Do we want to hash here? Better to do it before sending or on request?
+    raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids) -- Do we want to hash here? Better to do it before sending or on request?
   end
     
   -- Fill menu with desirability list
@@ -1182,9 +1296,12 @@ function iwtb:OnEnable()
     info.func = bossWantDropDown_OnClick
     for desireid, name in pairs(desire) do
       info.text, info.arg1, info.arg2 = name, desireid, idofboss
-      if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
-      and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~=nil
-      and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] == desireid then
+      --if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
+      --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~=nil
+      --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] == desireid then
+      if raiderDB.char.raids[raiderSelectedTier.instid] ~= nil
+      and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~=nil
+      and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid == desireid then
         info.checked = true
       else
         info.checked = false
@@ -1216,9 +1333,12 @@ function iwtb:OnEnable()
     for desireid, name in pairs(desire) do
       info.text, info.arg1, info.arg2 = name, desireid, bossKillPopupSelectedBossId
       if tonumber(bossKillInfo.bossid) > 0
-      and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses ~= nil
-      and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] ~=nil
-      and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] == desireid then
+      --and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses ~= nil
+      --and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] ~=nil
+      --and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] == desireid then
+      and raiderDB.char.raids[bossKillInfo.instid] ~= nil
+      and raiderDB.char.raids[bossKillInfo.instid][bossKillInfo.bossid] ~=nil
+      and raiderDB.char.raids[bossKillInfo.instid][bossKillInfo.bossid].desireid == desireid then
         info.checked = true
       else
         info.checked = false
@@ -1259,16 +1379,20 @@ function iwtb:OnEnable()
     
     if idofboss ~= "0" then
       local function bossDesire(bossid)
-        if raiderDB.char.expac[curExpac].tier[curInst].bosses ~= nil
-        and raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss] ~=nil then
-          bossKillPopupSelectedDesireId = raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
-          return raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+        --if raiderDB.char.expac[curExpac].tier[curInst].bosses ~= nil
+        --and raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss] ~=nil then
+        --  bossKillPopupSelectedDesireId = raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+        --  return raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
+        if raiderDB.char.raids[curInst] ~= nil
+        and raiderDB.char.raids[curInst][idofboss] ~=nil then
+          bossKillPopupSelectedDesireId = raiderDB.char.raids[curInst][idofboss].desireid
+          return raiderDB.char.raids[curInst][idofboss].desireid
         else
           return 0
         end
       end
       local desireofboss = bossDesire(idofboss)
-      print(desireofboss)
+      print("desireid (from kill):",desireofboss)
       
       local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, tonumber(idofboss))
       bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
@@ -2113,9 +2237,10 @@ function iwtb:OnEnable()
   bossKillPopupSend:RegisterForClicks("LeftButtonUp")
   bossKillPopupSend:SetScript("OnClick", function(s)
     if bossKillPopupSelectedDesireId > 0 then
-      raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] = bossKillPopupSelectedDesireId
+      --raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] = bossKillPopupSelectedDesireId
+      raiderDB.char.raids[bossKillInfo.instid][bossKillInfo.bossid].desireid = bossKillPopupSelectedDesireId -- setting this twice? Already done in kill function?
       L_UIDropDownMenu_SetSelectedID(bossFrame[bossKillInfo.bossid].dropdown, bossKillPopupSelectedDesireId)
-      raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.expac)
+      raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids)
       -- Send current desire list to raid
       if not IsInRaid() then
         iwtb.setStatusText("raider", L["Need to be in a raid group"])
@@ -2210,6 +2335,16 @@ function iwtb:OnEnable()
   if inInstance and instanceType == "raid" then
     enterInstance("RAID_INSTANCE_WELCOME", "Unknown")
   end
+  
+  -----------
+  -- debug --
+  -----------
+  
+  ViragDevTool_AddData(raidLeaderDB, "raidLeaderDB")
+  ViragDevTool_AddData(iwtb.raidLeaderDB.char, "raidLeaderDB_char")
+  ViragDevTool_AddData(rlProfileDB, "rlProfileDB")
+  ViragDevTool_AddData(db, "iwtbdb")
+  ViragDevTool_AddData(raiderDB, "raiderDB")
 end
 
 function iwtb:OnDisable()
