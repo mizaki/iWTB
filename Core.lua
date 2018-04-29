@@ -678,7 +678,7 @@ end
 function iwtb.convertDB(dbname)
   if dbname == "raider" then
     print("Converting raider DB")
-    if raiderDB.char.raids == nil then raiderDB.char.raids = {} end
+    if raiderDB.char.expac and raiderDB.char.raids == nil then raiderDB.char.raids = {} end
     wipe(raiderDB.char.raids)
     -- move all raidids to raiderDB.raids from raiderDB.expac.tier
     for expacid, expac in pairs (raiderDB.char.expac) do
@@ -701,7 +701,7 @@ function iwtb.convertDB(dbname)
       end
     end
   elseif dbname == "rl" then
-    if rlProfileDB.profile.raiders == nil then rlProfileDB.profile.raiders = {} end
+    if iwtb.raidLeaderDB.char.raiders and rlProfileDB.profile.raiders == nil then rlProfileDB.profile.raiders = {} end
     wipe(rlProfileDB.profile.raiders)
     print("Converting raid leader DB")
     -- move all raiders raidids to raiderDB.raids from raiderDB.expac.tier
