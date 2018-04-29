@@ -1530,7 +1530,7 @@ function iwtb:OnEnable()
       bossKillWantDropDown_OnClick(bossKillPopup.desireDrop.Button, desireofboss, idofboss)
       
       -- Start timer to hide popup window
-      self:ScheduleTimer("hideKillPopup", 15)
+      self:ScheduleTimer("hideKillPopup", db.char.autohideKillTime)
     end
   end
   
@@ -1788,7 +1788,7 @@ function iwtb:OnEnable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
     --iwtb.setStatusText("raider", "Testing")
-    bossKilled("BOSS_KILL", 2070, "Kin'garoth")
+    bossKilled("BOSS_KILL", 2070, "Antoran High Command") -- "Felhounds of Sargeras", 1712, 1987 - engageId = 2074
     --print("autohideTime: ",db.char.autohideKillTime)
     --bossKillPopup:Show()
   end)
@@ -2286,7 +2286,6 @@ function iwtb:OnEnable()
   bossKillPopup:SetScript("OnDragStart", function(s) s:StartMoving() end)
   bossKillPopup:SetScript("OnDragStop", function(s) s:StopMovingOrSizing()
     _, _, db.char.killPopup.anc, db.char.killPopup.x, db.char.killPopup.y = s:GetPoint()
-    print(s:GetPoint())
   end)
   bossKillPopup:SetScript("OnHide", function(s) s:StopMovingOrSizing() end)
 
