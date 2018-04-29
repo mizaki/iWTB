@@ -3,7 +3,7 @@
 ## Title: iWTB
 ## Author: jinxybob
 ## Notes: Helps organise which raider wants which boss.
-## SavedVariables: iWTBDB, iWTBRaiderDB, iWTBRaidLeaderDB
+## SavedVariables: iWTBDB, iWTBRaiderDB, iWTBRaidLeaderDB, iWTBrlProfileDB
 ## Dependencies: 
 ## OptionalDeps: LibStub, Ace3, LibUIDropDownMenu
 

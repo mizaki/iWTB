@@ -377,6 +377,24 @@ function iwtb.isGuildMember(name)
   return false
 end
 
+local function hasNote(name, tier, boss) -- compare the player name to the rl db to see if they have a note for the selected boss
+  -- First check if the player is in rl db
+  for tname, rldb in pairs(rlProfileDB.profile.raiders) do
+    if tname == name and rldb.raids ~= nil then
+      for tierid, tiers in pairs(rldb.raids) do
+        if tierid == tier then
+          for bossid, bosses in pairs(tiers) do
+            if bossid == boss then
+              if bosses.note and bosses.note ~= "" then return true, bosses.note end
+            end
+          end
+        end
+      end
+    end
+  end
+  return false, ""
+end
+
 -- Add/draw Out of Raid slot for raider entry.
 local function drawOoR(ooRraiders)
   -- Find number of current slots
@@ -430,6 +448,37 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].desireTag.text:SetFontObject("SpellFont_Small")
     rlOoRcontentSlots[n].desireTag.text:SetText(desire[desireid])
     
+    -- note
+    rlOoRcontentSlots[n].note = CreateFrame("Frame", "iwtboorslotnote" .. n, rlOoRcontentSlots[n].desireTag)
+    rlOoRcontentSlots[n].note:SetWidth(16)
+    rlOoRcontentSlots[n].note:SetHeight(16)
+    rlOoRcontentSlots[n].note:ClearAllPoints()
+    rlOoRcontentSlots[n].note:SetPoint("BOTTOMRIGHT", 0, 1)
+    
+    local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
+    texture = rlOoRcontentSlots[n].note:CreateTexture("iwtboornotetex")
+    texture:SetWidth(16)
+    texture:SetHeight(16)
+    texture:SetPoint("TOPLEFT", 0, 0)
+    texture:SetDrawLayer("ARTWORK",7)
+    if hasNote then
+      texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+    else
+      texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
+    end
+    rlOoRcontentSlots[n].note.texture = texture
+    
+    rlOoRcontentSlots[n].note:SetAttribute("hasNote", true)
+    rlOoRcontentSlots[n].note:SetAttribute("noteTxt", noteTxt)
+    rlOoRcontentSlots[n].note:SetScript("OnEnter", function(s)
+                                GameTooltip:SetOwner(s)
+                                if rlOoRcontentSlots[n].note:GetAttribute("hasNote") then
+                                  GameTooltip:AddLine(rlOoRcontentSlots[n].note:GetAttribute("noteTxt"))
+                                  GameTooltip:Show()
+                                end
+                              end)
+		rlOoRcontentSlots[n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
+    
     -- Context menu
     rlOoRcontentSlots[n]:RegisterForClicks("RightButtonUp")
     rlOoRcontentSlots[n]:SetScript("OnClick", function(s) L_ToggleDropDownMenu(1, nil, s.dropdown, "cursor", -25, -10) end)
@@ -444,9 +493,20 @@ local function drawOoR(ooRraiders)
         -- Add another slot
         createOoRSlot(i, name, desireid)
       else
+        local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
         -- Reuse slot
         rlOoRcontentSlots[i].nameText:SetText(name)
         rlOoRcontentSlots[i].desireTag.text:SetText(desire[desireid])
+        
+        if hasNote then
+          rlOoRcontentSlots[i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+          rlOoRcontentSlots[i].note:SetAttribute("hasNote", true)
+          rlOoRcontentSlots[i].note:SetAttribute("noteTxt", noteTxt)
+        else
+          rlOoRcontentSlots[i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
+          rlOoRcontentSlots[i].note:SetAttribute("hasNote", false)
+          rlOoRcontentSlots[i].note:SetAttribute("noteTxt", "")
+        end
         rlOoRcontentSlots[i]:Show()
       end
       i = i +1
@@ -488,7 +548,7 @@ local function redrawGroup(grp)
   end
 end
 
-local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss
+local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss - expac depreciated
   -- First check if the player is in rl db
   --[[for tname, rldb in pairs(raidLeaderDB.char.raiders) do
     if tname == name and rldb.expac ~= nil then
@@ -513,9 +573,7 @@ local function hasDesire(name, expac, tier, boss) -- compare the player name to 
         if tierid == tier then
           for bossid, bosses in pairs(tiers) do
             if bossid == boss then
-              for desire, desireid in pairs(bosses) do
-                return desireid
-              end
+              if bosses.desireid then return bosses.desireid end
             end
           end
         end
@@ -562,7 +620,7 @@ local function raidUpdate(self)
       if n > 40 then break end
     end
     if not found then
-      -- Check desire for boss
+      -- Check desire for boss - expacid depreciated
       local desireid = hasDesire(rldbName, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
       if desireid then
         ooRraiders[rldbName] = desireid
@@ -589,6 +647,17 @@ local function raidUpdate(self)
       grpMemSlotFrame[subgrp][k].roleTexture:SetTexCoord(roleTexCoords[player.crole].left, roleTexCoords[player.crole].right, roleTexCoords[player.crole].top, roleTexCoords[player.crole].bottom)
       grpMemSlotFrame[subgrp][k].roleTexture:Show()
       grpMemSlotFrame[subgrp][k].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
+      
+      local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
+      if hasNote then
+        grpMemSlotFrame[subgrp][k].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+        grpMemSlotFrame[subgrp][k].note:SetAttribute("hasNote", true)
+        grpMemSlotFrame[subgrp][k].note:SetAttribute("noteTxt", noteTxt)
+      else
+        grpMemSlotFrame[subgrp][k].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
+        grpMemSlotFrame[subgrp][k].note:SetAttribute("hasNote", false)
+        grpMemSlotFrame[subgrp][k].note:SetAttribute("noteTxt", "")
+      end
     end
   end
 end
@@ -618,13 +687,14 @@ end
 
 local function removeRaiderData(f, name)
   --raidLeaderDB.char.raiders[name] = nil
-  rlProfileDB.profile.raiders[name] = nil
+  wipe(rlProfileDB.profile.raiders[name])
   iwtb.setStatusText("raidleader", L["Removed data - "] .. name)
   raidUpdate()
 end
 
 function iwtb.convertDB(dbname)
   if dbname == "raider" then
+    print("Converting raider DB")
     if raiderDB.char.raids == nil then raiderDB.char.raids = {} end
     wipe(raiderDB.char.raids)
     -- move all raidids to raiderDB.raids from raiderDB.expac.tier
@@ -650,6 +720,7 @@ function iwtb.convertDB(dbname)
   elseif dbname == "rl" then
     if rlProfileDB.profile.raiders == nil then rlProfileDB.profile.raiders = {} end
     wipe(rlProfileDB.profile.raiders)
+    print("Converting raid leader DB")
     -- move all raiders raidids to raiderDB.raids from raiderDB.expac.tier
     for raider, data in pairs(iwtb.raidLeaderDB.char.raiders) do
       for expacid, expac in pairs (data.expac) do
@@ -998,7 +1069,8 @@ function iwtb:OnInitialize()
       local cmd, arg = strsplit(" ", input)
       if cmd == "debugp" then
         --print_table(raiderDB.char.raids[raiderSelectedTier.instid]["1992"])
-        iwtb.convertDB("rl")
+        --iwtb.convertDB("rl")
+        print(next(rlProfileDB.profile.raiders))
       elseif cmd == "debugr" then
         print_table(raiderDB.char.raids)
       elseif cmd == "debugo" then
@@ -1137,10 +1209,60 @@ function iwtb:OnEnable()
               EncounterJournal_OpenJournal(difficulty, arg1, bossid, nil, nil, itemID)
             end)
             
+            -- Create add note button
+            bossFrame[idofboss].addNote = CreateFrame("Button", "iwtbaddnotebut", bossFrame[idofboss], "UIPanelButtonTemplate")
+            bossFrame[idofboss].addNote:SetWidth(129)
+            bossFrame[idofboss].addNote:SetHeight(20)
+            bossFrame[idofboss].addNote:SetPoint("BOTTOMRIGHT", -3, 1)
+            if raiderDB.char.raids[raiderSelectedTier.instid]
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss]
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note ~= "" then
+              bossFrame[idofboss].addNote:SetText(L["Edit note"])
+            else
+              bossFrame[idofboss].addNote:SetText(L["Add note"])
+            end
+            bossFrame[idofboss].addNote:Enable()
+            bossFrame[idofboss].addNote:RegisterForClicks("LeftButtonUp")
+            bossFrame[idofboss].addNote:SetScript("OnClick", function(s)
+              local editbox = CreateFrame("EditBox", "iwtbaddnoteedit", bossFrame[idofboss].addNote, "InputBoxTemplate")
+              editbox:SetSize(300, 15)
+              editbox:SetPoint("BOTTOMRIGHT", 0, 0)
+              --editbox:ClearFocus()
+              --editbox:SetAutoFocus(false)
+              editbox:HighlightText()
+              --editbox:SetText(L["Enter note"])
+              if raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note then editbox:SetText(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note) end
+              editbox:SetScript("OnKeyUp", function(s, key)
+                        --print(key)
+                        if key == "ESCAPE" or key == "ENTER" then
+                          --s:ClearFocus()
+                          print("press esc or enter")
+                          if s:GetText() ~= "" then
+                            raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
+                            bossFrame[idofboss].addNote:SetText(L["Edit note"])
+                          end
+                          s:Hide()
+                        end
+                      end)
+              editbox:SetScript("OnEnterPressed", function(s)
+                print("pressed enter")
+                print(s:GetText())
+                if s:GetText() ~= "" then
+                  raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
+                  bossFrame[idofboss].addNote:SetText(L["Edit note"])
+                end
+                s:ClearFocus()
+                s:Hide()
+              end)
+              bossFrame[idofboss].addNote.editbox = editbox
+            end)
             
+            
+      
             -- add dropdown menu for need/minor/os etc.
             local bossWantdropdown = CreateFrame("Frame", "bossWantdropdown" .. bossid, bossFrame[idofboss], "L_UIDropDownMenuTemplate")
-            bossWantdropdown:SetPoint("RIGHT", 12, -2)
+            bossWantdropdown:SetPoint("RIGHT", 12, 7)
             L_UIDropDownMenu_SetWidth(bossWantdropdown, 110)
             L_UIDropDownMenu_Initialize(bossWantdropdown, bossWantDropDown_Menu)
             bossFrame[idofboss].dropdown = bossWantdropdown
@@ -1928,6 +2050,32 @@ function iwtb:OnEnable()
       --grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
       grpMemSlotFrame[i][n].desireTag.text:SetFontObject("SpellFont_Small")
       grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
+      
+      -- note
+      grpMemSlotFrame[i][n].note = CreateFrame("Frame", "iwtbgrpslotnote" .. n, grpMemSlotFrame[i][n].desireTag)
+      grpMemSlotFrame[i][n].note:SetWidth(16)
+      grpMemSlotFrame[i][n].note:SetHeight(16)
+      grpMemSlotFrame[i][n].note:ClearAllPoints()
+      grpMemSlotFrame[i][n].note:SetPoint("BOTTOMRIGHT", 3, 0)
+      
+      texture = grpMemSlotFrame[i][n].note:CreateTexture("iwtbgrpnotetex")
+      texture:SetWidth(16)
+      texture:SetHeight(16)
+      texture:SetPoint("TOPLEFT", 0, 0)
+      texture:SetDrawLayer("ARTWORK",7)
+      texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
+      grpMemSlotFrame[i][n].note.texture = texture
+      
+      grpMemSlotFrame[i][n].note:SetAttribute("hasNote", false)
+      grpMemSlotFrame[i][n].note:SetAttribute("noteTxt", "")
+      grpMemSlotFrame[i][n].note:SetScript("OnEnter", function(s)
+                                  GameTooltip:SetOwner(s)
+                                  if grpMemSlotFrame[i][n].note:GetAttribute("hasNote") then
+                                    GameTooltip:AddLine(grpMemSlotFrame[i][n].note:GetAttribute("noteTxt"))
+                                    GameTooltip:Show()
+                                  end
+                                end)
+      grpMemSlotFrame[i][n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
     end
   end
   
@@ -2339,12 +2487,13 @@ function iwtb:OnEnable()
   -----------
   -- debug --
   -----------
-  
+  --[[
   ViragDevTool_AddData(raidLeaderDB, "raidLeaderDB")
   ViragDevTool_AddData(iwtb.raidLeaderDB.char, "raidLeaderDB_char")
   ViragDevTool_AddData(rlProfileDB, "rlProfileDB")
   ViragDevTool_AddData(db, "iwtbdb")
   ViragDevTool_AddData(raiderDB, "raiderDB")
+  ]]
 end
 
 function iwtb:OnDisable()

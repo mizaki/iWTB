@@ -33,6 +33,8 @@ L["Tutorial"] = true
 L["Options"] = true
 L["Out of raid players"] = true
 L["Boss killed!"] = true
+L["Add note"] = true
+L["Edit note"] = true
 
 -- Options
 L["GUI"] = true
