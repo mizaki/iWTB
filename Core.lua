@@ -550,23 +550,6 @@ end
 
 local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss - expac depreciated
   -- First check if the player is in rl db
-  --[[for tname, rldb in pairs(raidLeaderDB.char.raiders) do
-    if tname == name and rldb.expac ~= nil then
-      for expacid,expacs in pairs(rldb.expac) do -- can convert
-        if expacid == expac then
-          for tierid, tiers in pairs(expacs.tier) do
-            if tierid == tier then
-              for bossid, desire in pairs(tiers.bosses) do
-                if bossid == boss then
-                  return desire
-                end
-              end
-            end
-          end
-        end
-      end
-    end
-  end]]
   for tname, rldb in pairs(rlProfileDB.profile.raiders) do
     if tname == name and rldb.raids ~= nil then
       for tierid, tiers in pairs(rldb.raids) do
@@ -648,7 +631,7 @@ local function raidUpdate(self)
       grpMemSlotFrame[subgrp][k].roleTexture:Show()
       grpMemSlotFrame[subgrp][k].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
       
-      local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
+      local hasNote, noteTxt = hasNote(player.name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
       if hasNote then
         grpMemSlotFrame[subgrp][k].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
         grpMemSlotFrame[subgrp][k].note:SetAttribute("hasNote", true)
