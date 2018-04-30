@@ -74,6 +74,7 @@ L["Need to be in a raid group"] = true
 L["Ignored non-guild member data - "] = true
 L["Ignored data. Change in options to receive data"] = true
 L["Failed to find boss name: "] = true
+L["Updated raider DB"] = true
 
 -- Confirmation boxes
 L["Remove selected desire from ALL bosses?"] = true

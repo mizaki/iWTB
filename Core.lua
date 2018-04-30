@@ -677,56 +677,51 @@ end
 
 function iwtb.convertDB(dbname)
   if dbname == "raider" then
-    print("Converting raider DB")
-    if raiderDB.char.expac and raiderDB.char.raids == nil then raiderDB.char.raids = {} end
-    wipe(raiderDB.char.raids)
-    -- move all raidids to raiderDB.raids from raiderDB.expac.tier
-    for expacid, expac in pairs (raiderDB.char.expac) do
-      for kt,tier in pairs(expac) do
-        --print_table(tierid)
-        for raidid, bosses in pairs(tier) do
-          --print_table(bossid)
-          for kb, boss in pairs(bosses) do
-            for bossid, desireid in pairs(boss) do
-              --print_table(desireid)
-              print("expac: ", expacid, " raidid: ", raidid, " bossid: ", bossid, "desireid: ", desireid)
-              if raiderDB.char.raids[raidid] == nil then raiderDB.char.raids[raidid] = {} end
-              if raiderDB.char.raids[raidid][bossid] == nil then
-                raiderDB.char.raids[raidid][bossid] = {}
-                raiderDB.char.raids[raidid][bossid]["desireid"] = desireid
-              end
-            end
-          end
-        end
-      end
-    end
-  elseif dbname == "rl" then
-    if iwtb.raidLeaderDB.char.raiders and rlProfileDB.profile.raiders == nil then rlProfileDB.profile.raiders = {} end
-    wipe(rlProfileDB.profile.raiders)
-    print("Converting raid leader DB")
-    -- move all raiders raidids to raiderDB.raids from raiderDB.expac.tier
-    for raider, data in pairs(iwtb.raidLeaderDB.char.raiders) do
-      for expacid, expac in pairs (data.expac) do
+    if raiderDB.char.expac then
+      if raiderDB.char.raids == nil then raiderDB.char.raids = {} end
+      wipe(raiderDB.char.raids)
+      -- move all raidids to raiderDB.raids from raiderDB.expac.tier
+      for expacid, expac in pairs (raiderDB.char.expac) do
         for kt,tier in pairs(expac) do
-          --print_table(tierid)
           for raidid, bosses in pairs(tier) do
-            --print_table(bossid)
             for kb, boss in pairs(bosses) do
               for bossid, desireid in pairs(boss) do
-                --print_table(desireid)
-                print("raider: ", raider, "expac: ", expacid, " raidid: ", raidid, " bossid: ", bossid, "desireid: ", desireid)
-                if rlProfileDB.profile.raiders[raider] == nil then rlProfileDB.profile.raiders[raider] = {} end
-                if rlProfileDB.profile.raiders[raider].raids == nil then rlProfileDB.profile.raiders[raider].raids = {} end
-                if rlProfileDB.profile.raiders[raider].raids[raidid] == nil then rlProfileDB.profile.raiders[raider].raids[raidid] = {} end
-                if rlProfileDB.profile.raiders[raider].raids[raidid][bossid] == nil then
-                  rlProfileDB.profile.raiders[raider].raids[raidid][bossid] = {}
-                  rlProfileDB.profile.raiders[raider].raids[raidid][bossid]["desireid"] = desireid
+                if raiderDB.char.raids[raidid] == nil then raiderDB.char.raids[raidid] = {} end
+                if raiderDB.char.raids[raidid][bossid] == nil then
+                  raiderDB.char.raids[raidid][bossid] = {}
+                  raiderDB.char.raids[raidid][bossid]["desireid"] = desireid
                 end
               end
             end
           end
         end
       end
+      iwtb.setStatusText("raider", L["Updated raider DB"])
+    end
+  elseif dbname == "rl" then
+    if iwtb.raidLeaderDB.char.raiders then
+      if rlProfileDB.profile.raiders == nil then rlProfileDB.profile.raiders = {} end
+      wipe(rlProfileDB.profile.raiders)
+      for raider, data in pairs(iwtb.raidLeaderDB.char.raiders) do
+        for expacid, expac in pairs (data.expac) do
+          for kt,tier in pairs(expac) do
+            for raidid, bosses in pairs(tier) do
+              for kb, boss in pairs(bosses) do
+                for bossid, desireid in pairs(boss) do
+                  if rlProfileDB.profile.raiders[raider] == nil then rlProfileDB.profile.raiders[raider] = {} end
+                  if rlProfileDB.profile.raiders[raider].raids == nil then rlProfileDB.profile.raiders[raider].raids = {} end
+                  if rlProfileDB.profile.raiders[raider].raids[raidid] == nil then rlProfileDB.profile.raiders[raider].raids[raidid] = {} end
+                  if rlProfileDB.profile.raiders[raider].raids[raidid][bossid] == nil then
+                    rlProfileDB.profile.raiders[raider].raids[raidid][bossid] = {}
+                    rlProfileDB.profile.raiders[raider].raids[raidid][bossid]["desireid"] = desireid
+                  end
+                end
+              end
+            end
+          end
+        end
+      end
+      iwtb.setStatusText("raidleader", L["Updated raider DB"])
     end
   end
 end
@@ -1060,8 +1055,6 @@ function iwtb:OnInitialize()
         print_table(raidLeaderDB.char.raiders)
       elseif cmd == "debugn" then
         print_table(rlProfileDB.profile.raiders)
-      elseif cmd == "debugh" then
-        
       else
         --print("cmd: ", cmd, " arg: ", arg)
         --LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
@@ -1070,7 +1063,7 @@ function iwtb:OnInitialize()
   end
   
   -------------------------------------------------------------
-  -- Move old data layout to new. [raidid][bossid]["desireid"]
+  -- Move old data layout to new. [raidid][bossid]["desireid"], [raidid][bossid]["note"]
   -------------------------------------------------------------
   --wipe(raiderDB.char.raids)
   if next(raiderDB.char.raids) == nil then iwtb.convertDB("raider") end
@@ -1220,7 +1213,7 @@ function iwtb:OnEnable()
                         --print(key)
                         if key == "ESCAPE" or key == "ENTER" then
                           --s:ClearFocus()
-                          print("press esc or enter")
+                          --print("press esc or enter")
                           if s:GetText() ~= "" then
                             raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                             bossFrame[idofboss].addNote:SetText(L["Edit note"])
@@ -1229,8 +1222,8 @@ function iwtb:OnEnable()
                         end
                       end)
               editbox:SetScript("OnEnterPressed", function(s)
-                print("pressed enter")
-                print(s:GetText())
+                --print("pressed enter")
+                --print(s:GetText())
                 if s:GetText() ~= "" then
                   raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                   bossFrame[idofboss].addNote:SetText(L["Edit note"])
@@ -1422,7 +1415,7 @@ function iwtb:OnEnable()
   local function bossKillWantDropDown_OnClick(self, arg1, arg2, checked)
     -- arg1 = desire id, arg2 = boss id
     -- Set dropdown text to new selection
-    print("desireid:",arg1)
+    print("desireid:", arg1, " type: ", type(arg1))
     if arg1 > 0 then
       L_UIDropDownMenu_SetSelectedID(bossKillPopup.desireDrop, arg1)
     else
@@ -1497,7 +1490,7 @@ function iwtb:OnEnable()
         end
       end
       local desireofboss = bossDesire(idofboss)
-      print("desireid (from kill):",desireofboss)
+      print("desireid (from kill):", desireofboss, " type: ", type(desireofboss))
       
       local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, tonumber(idofboss))
       bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
@@ -1775,7 +1768,7 @@ function iwtb:OnEnable()
     --print("autohideTime: ",db.char.autohideKillTime)
     --bossKillPopup:Show()
   end)
-  --raiderTestButton:Hide()
+  raiderTestButton:Hide()
   
   -- Raider close button
   local raiderCloseButton = CreateFrame("Button", "iwtbraiderclosebutton", raiderTab, "UIPanelButtonTemplate")
