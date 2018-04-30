@@ -696,7 +696,8 @@ function iwtb.convertDB(dbname)
           end
         end
       end
-      iwtb.setStatusText("raider", L["Updated raider DB"])
+      --iwtb.setStatusText("raider", L["Updated raider DB"])
+      print(L["Updated raider DB"])
     end
   elseif dbname == "rl" then
     if iwtb.raidLeaderDB.char.raiders then
@@ -721,7 +722,8 @@ function iwtb.convertDB(dbname)
           end
         end
       end
-      iwtb.setStatusText("raidleader", L["Updated raider DB"])
+      --iwtb.setStatusText("raidleader", L["Updated raider DB"])
+      print(L["Updated raidleader DB"])
     end
   end
 end
@@ -1055,6 +1057,8 @@ function iwtb:OnInitialize()
         print_table(raidLeaderDB.char.raiders)
       elseif cmd == "debugn" then
         print_table(rlProfileDB.profile.raiders)
+      elseif cmd == "debugl" then
+        print("Boss listneing: ", testBossListneing)
       else
         --print("cmd: ", cmd, " arg: ", arg)
         --LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
@@ -1512,10 +1516,22 @@ function iwtb:OnEnable()
   
   -- Raid welcome
   local function enterInstance(e, name)
-    print(GetRaidDifficultyID())
-    if db.char.showPopup then
+    if db.char.showPopup and GetRaidDifficultyID() == 16 then
       print("BOSS_KILL listening")
       iwtb:RegisterEvent("BOSS_KILL", bossKilled)
+    end
+  end
+  
+  local function leftGroup()
+    print("BOSS_KILL stop listening")
+    iwtb:UnregisterEvent("BOSS_KILL")
+  end
+  
+  local function playerEnteringWorld()
+    -- Check if we are in a raid (having /reload etc.)
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and instanceType == "raid" then
+      enterInstance("RAID_INSTANCE_WELCOME", "Unknown")
     end
   end
   
@@ -2448,16 +2464,12 @@ function iwtb:OnEnable()
   end
   
   --iwtb:RegisterEvent("EJ_LOOT_DATA_RECIEVED", eventfired)
-  iwtb:RegisterEvent("GROUP_LEFT", eventfired)
+  iwtb:RegisterEvent("GROUP_LEFT", leftGroup)
+  iwtb:RegisterEvent("GROUP_JOINED", eventfired)
+  iwtb:RegisterEvent("PLAYER_ENTERING_WORLD", playerEnteringWorld)
   --iwtb:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", eventfired)
   --iwtb:RegisterEvent("ENCOUNTER_LOOT_RECEIVED", eventfired)
   --iwtb:RegisterEvent("ITEM_PUSH", eventfired)
-  
-  -- Check if we are in a raid (having /reload etc.)
-  local inInstance, instanceType = IsInInstance()
-  if inInstance and instanceType == "raid" then
-    enterInstance("RAID_INSTANCE_WELCOME", "Unknown")
-  end
   
   -----------
   -- debug --
