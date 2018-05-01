@@ -1009,7 +1009,7 @@ function iwtb:OnInitialize()
                   end
                 end
       },]]
-      --[[copyRLdata = { -- TODO, requires changing from db.char to what?
+      --[[copyRLdata = { -- TODO
         name = L["Copy desire data"],
         order = 5,
         desc = L["Copy desire data from one character to another"],
@@ -1052,17 +1052,6 @@ function iwtb:OnInitialize()
     else
       local cmd, arg = strsplit(" ", input)
       if cmd == "debugp" then
-        --print_table(raiderDB.char.raids[raiderSelectedTier.instid]["1992"])
-        --iwtb.convertDB("rl")
-        print(next(rlProfileDB.profile.raiders))
-      elseif cmd == "debugr" then
-        print_table(raiderDB.char.raids)
-      elseif cmd == "debugo" then
-        print_table(raidLeaderDB.char.raiders)
-      elseif cmd == "debugn" then
-        print_table(rlProfileDB.profile.raiders)
-      elseif cmd == "debugl" then
-        print("Boss listneing: ", testBossListneing)
       else
         --print("cmd: ", cmd, " arg: ", arg)
         --LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)
@@ -1073,13 +1062,13 @@ function iwtb:OnInitialize()
   -------------------------------------------------------------
   -- Move old data layout to new. [raidid][bossid]["desireid"], [raidid][bossid]["note"]
   -------------------------------------------------------------
-  --wipe(raiderDB.char.raids)
   if next(raiderDB.char.raids) == nil then iwtb.convertDB("raider") end
   
   -------------------------------------------------------------
-  -- Move old data layout to new and profile. [profile][raiders][raider][raidid][bossid]["desireid"]
+  -- Move old data layout to new and profile. ["profile"]["raiders"][raider][raidid][bossid]["desireid"]
   -------------------------------------------------------------
   if next(rlProfileDB.profile.raiders) == nil then iwtb.convertDB("rl") end
+  
 end
 
 function iwtb:OnEnable()
@@ -1212,20 +1201,14 @@ function iwtb:OnEnable()
               local editbox = CreateFrame("EditBox", "iwtbaddnoteedit", bossFrame[idofboss].addNote, "InputBoxTemplate")
               editbox:SetSize(300, 15)
               editbox:SetPoint("BOTTOMRIGHT", 0, 0)
-              --editbox:ClearFocus()
-              --editbox:SetAutoFocus(false)
               editbox:HighlightText()
-              --editbox:SetText(L["Enter note"])
               
               dbBossCheck(raiderSelectedTier.instid, idofboss)
               if raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note then
                 editbox:SetText(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note)
               end
               editbox:SetScript("OnKeyUp", function(s, key)
-                        --print(key)
                         if key == "ESCAPE" or key == "ENTER" then
-                          --s:ClearFocus()
-                          --print("press esc or enter")
                           if s:GetText() ~= "" then
                             dbBossCheck(raiderSelectedTier.instid, idofboss)
                             raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
@@ -1235,8 +1218,6 @@ function iwtb:OnEnable()
                         end
                       end)
               editbox:SetScript("OnEnterPressed", function(s)
-                --print("pressed enter")
-                --print(s:GetText())
                 if s:GetText() ~= "" then
                   dbBossCheck(raiderSelectedTier.instid, idofboss)
                   raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
@@ -1430,9 +1411,9 @@ function iwtb:OnEnable()
   local function bossKillWantDropDown_OnClick(self, arg1, arg2, checked)
     -- arg1 = desire id, arg2 = boss id
     -- Set dropdown text to new selection
-    print("desireid:", arg1, " type: ", type(arg1))
     if arg1 > 0 then
-      L_UIDropDownMenu_SetSelectedID(bossKillPopup.desireDrop, arg1)
+      --L_UIDropDownMenu_SetSelectedID(bossKillPopup.desireDrop, arg1) -- For "reasons" this sometimes doesn't work so SetText used instead.
+      L_UIDropDownMenu_SetText(bossKillPopup.desireDrop, desire[arg1])
     else
       L_UIDropDownMenu_SetText(bossKillPopup.desireDrop, L["Select desirability"])
     end
@@ -1492,10 +1473,6 @@ function iwtb:OnEnable()
     
     if idofboss ~= "0" then
       local function bossDesire(bossid)
-        --if raiderDB.char.expac[curExpac].tier[curInst].bosses ~= nil
-        --and raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss] ~=nil then
-        --  bossKillPopupSelectedDesireId = raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
-        --  return raiderDB.char.expac[curExpac].tier[curInst].bosses[idofboss]
         if raiderDB.char.raids[curInst] ~= nil
         and raiderDB.char.raids[curInst][idofboss] ~=nil then
           bossKillPopupSelectedDesireId = raiderDB.char.raids[curInst][idofboss].desireid
@@ -1505,7 +1482,6 @@ function iwtb:OnEnable()
         end
       end
       local desireofboss = bossDesire(idofboss)
-      print("desireid (from kill):", desireofboss, " type: ", type(desireofboss))
       
       local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, tonumber(idofboss))
       bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
@@ -1527,7 +1503,7 @@ function iwtb:OnEnable()
   
   -- Raid welcome
   local function enterInstance(e, name)
-    if db.char.showPopup and GetRaidDifficultyID() == 16 then
+    if db.char.showPopup then -- and GetRaidDifficultyID() == 16 then @debug
       iwtb:RegisterEvent("BOSS_KILL", bossKilled)
     end
   end
@@ -1664,7 +1640,6 @@ function iwtb:OnEnable()
   tutorialHTML:SetFontObject('h1', Game20Font)
   tutorialHTML:SetFontObject('h2', Game18Font)
   tutorialHTML:SetFontObject('p', Game15Font)
-  --tutorialHTML:SetText('<html><body><h1>Test</h1><h2>Raider</h2></body></html>')
   local htmlText = '<html><body>' ..
     '<h1 align="center">' .. L["How to use iWTB - I Want That Boss!"] .. '</h1>' ..
     '<br />' ..
@@ -2165,7 +2140,7 @@ function iwtb:OnEnable()
   scrollbg:SetTexture(0, 0, 0, 0.4)
   rlRaiderNotListFrame.rlOoRscrollbar = rlOoRscrollbar
 
-  --content frame 
+  -- Content frame
   local rlOoRcontent = CreateFrame("Frame", "iwtbrloorlist", rlRaiderNotListFrame)
   rlOoRcontent:SetWidth((rlOoRcontent:GetParent():GetWidth()) -2)
   rlOoRcontent:SetHeight(rlRaiderNotListFrame:GetHeight())
@@ -2386,7 +2361,6 @@ function iwtb:OnEnable()
   bossKillPopupSend:RegisterForClicks("LeftButtonUp")
   bossKillPopupSend:SetScript("OnClick", function(s)
     if bossKillPopupSelectedDesireId > 0 then
-      --raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses[bossKillInfo.bossid] = bossKillPopupSelectedDesireId
       raiderDB.char.raids[bossKillInfo.instid][bossKillInfo.bossid].desireid = bossKillPopupSelectedDesireId -- setting this twice? Already done in kill function?
       L_UIDropDownMenu_SetSelectedID(bossFrame[bossKillInfo.bossid].dropdown, bossKillPopupSelectedDesireId)
       raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids)
@@ -2451,46 +2425,10 @@ function iwtb:OnEnable()
   -- Register listening events
   iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", raidUpdate)
   iwtb:RegisterEvent("RAID_INSTANCE_WELCOME", enterInstance)
-  
-  
-  local function eventfired(e, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
-    if e == "COMBAT_LOG_EVENT_UNFILTERED" then
-      if arg2 == "UNIT_DIED" then
-        print(arg1,arg2,arg3,arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11)
-        local _, _, _, _, _, id = strsplit("-", arg8)
-        print("mobid?: ", id)
-      end
-    elseif e == "CHAT_MSG_LOOT" then
-      print(arg1,"arg2:",arg2)
-      --print("arg2:" ,arg2, "arg3:",arg3, "arg4:",arg4, "arg5:",arg5, "arg6:",arg6)
-      print("name: ",arg5)
-	elseif e == "ENCOUNTER_END" then
-      print(e, "name: ", arg2, " id: ", arg1, " diff: ", arg3, " status: ", arg5)
-    else
-      print(e, arg1)
-      print("arg2:" ,arg2, "arg3:",arg3, "arg4:",arg4, "arg5:",arg5, "arg6:",arg6)
-      print("arg7:" ,arg7, "arg8:",arg8, "arg9:",arg9, "arg10:",arg10, "arg11:",arg11)
-    end
-  end
-  
-  --iwtb:RegisterEvent("EJ_LOOT_DATA_RECIEVED", eventfired)
   iwtb:RegisterEvent("GROUP_LEFT", leftGroup)
   iwtb:RegisterEvent("GROUP_JOINED", eventfired)
   iwtb:RegisterEvent("PLAYER_ENTERING_WORLD", playerEnteringWorld)
-  --iwtb:RegisterEvent("COMBAT_LOG_EVENT_UNFILTERED", eventfired)
-  --iwtb:RegisterEvent("ENCOUNTER_LOOT_RECEIVED", eventfired)
-  --iwtb:RegisterEvent("ITEM_PUSH", eventfired)
-  
-  -----------
-  -- debug --
-  -----------
-  --[[
-  ViragDevTool_AddData(raidLeaderDB, "raidLeaderDB")
-  ViragDevTool_AddData(iwtb.raidLeaderDB.char, "raidLeaderDB_char")
-  ViragDevTool_AddData(rlProfileDB, "rlProfileDB")
-  ViragDevTool_AddData(db, "iwtbdb")
-  ViragDevTool_AddData(raiderDB, "raiderDB")
-  ]]
+
 end
 
 function iwtb:OnDisable()
