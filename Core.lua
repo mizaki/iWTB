@@ -1503,7 +1503,7 @@ function iwtb:OnEnable()
   
   -- Raid welcome
   local function enterInstance(e, name)
-    if db.char.showPopup then -- and GetRaidDifficultyID() == 16 then @debug
+    if db.char.showPopup and GetRaidDifficultyID() == 16 then
       iwtb:RegisterEvent("BOSS_KILL", bossKilled)
     end
   end
