@@ -301,12 +301,12 @@ end
 
 -- Depreciated (most likely removed for release)
 local function dbSchemaCheck(level, expac)
-  if level == "expacs" then
+  if raiderDB.char.expac and level == "expacs" then
     if expacInfo == nil then getExpansions() end
     for key, value in pairs(expacInfo) do -- can convert
       if raiderDB.char.expac[key] == nil then raiderDB.char.expac[key] = {} end
     end
-  elseif level == "inst" and type(expac) == "number" then
+  elseif raiderDB.char.expac and level == "inst" and type(expac) == "number" then
     for key, value in pairs(tierRaidInstances.raids) do
       if raiderDB.char.expac[expac].tier == nil then raiderDB.char.expac[expac].tier = {} end
       if raiderDB.char.expac[expac].tier[key] == nil then
@@ -317,6 +317,10 @@ local function dbSchemaCheck(level, expac)
   end
 end
 
+local function dbBossCheck(instid, bossid)
+  if raiderDB.char.raids[instid] == nil then raiderDB.char.raids[instid] = {} end
+  if raiderDB.char.raids[instid][bossid] == nil then raiderDB.char.raids[instid][bossid] = {} end
+end
 
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -697,7 +701,7 @@ function iwtb.convertDB(dbname)
         end
       end
       --iwtb.setStatusText("raider", L["Updated raider DB"])
-      print(L["Updated raider DB"])
+      print("iWTB: ", L["Updated raider DB"])
     end
   elseif dbname == "rl" then
     if iwtb.raidLeaderDB.char.raiders then
@@ -723,7 +727,7 @@ function iwtb.convertDB(dbname)
         end
       end
       --iwtb.setStatusText("raidleader", L["Updated raider DB"])
-      print(L["Updated raidleader DB"])
+      print("iWTB: ", L["Updated raidleader DB"])
     end
   end
 end
@@ -757,7 +761,6 @@ function iwtb:OnInitialize()
   
   local raiderDefaults = {
     char = {
-      expac = {}, -- Depreciated (most likely removed for release)
       raids = {}, -- [raidid][desire] = n, [raidid][note] = text (plus possible later additions)
       bossListHash = "", -- this is the hash of all boss desires to be sent for comparison with the RL data (once implemented)
     },
@@ -765,9 +768,9 @@ function iwtb:OnInitialize()
   
   -- Depreciated (most likely removed for release)
   local raidLeaderDefaults = { -- for future - boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
-    char = {
-      raiders = {},
-    },
+    --char = {
+      --raiders = {},
+    --},
   }
   
   ----------------
@@ -941,7 +944,7 @@ function iwtb:OnInitialize()
       autohideKillTime = {
         name = L["Hide kill window after:"],
         order = 7,
-        width = 1,
+        width = "double",
         min = 15,
         max = 300,
         step = 1,
@@ -955,8 +958,9 @@ function iwtb:OnInitialize()
         get = function(info) return db.char.autohideKillTime end
       },
       resetPopup = {
-        name = L["Reset kill window"],
+        name = L["Reset kill window position"],
         order = 8,
+        width = "double",
         desc = L["Reset the position of the boss kill popup window"],
         type = "execute",
         func = function()
@@ -1212,13 +1216,18 @@ function iwtb:OnEnable()
               --editbox:SetAutoFocus(false)
               editbox:HighlightText()
               --editbox:SetText(L["Enter note"])
-              if raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note then editbox:SetText(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note) end
+              
+              dbBossCheck(raiderSelectedTier.instid, idofboss)
+              if raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note then
+                editbox:SetText(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note)
+              end
               editbox:SetScript("OnKeyUp", function(s, key)
                         --print(key)
                         if key == "ESCAPE" or key == "ENTER" then
                           --s:ClearFocus()
                           --print("press esc or enter")
                           if s:GetText() ~= "" then
+                            dbBossCheck(raiderSelectedTier.instid, idofboss)
                             raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                             bossFrame[idofboss].addNote:SetText(L["Edit note"])
                           end
@@ -1229,6 +1238,7 @@ function iwtb:OnEnable()
                 --print("pressed enter")
                 --print(s:GetText())
                 if s:GetText() ~= "" then
+                  dbBossCheck(raiderSelectedTier.instid, idofboss)
                   raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                   bossFrame[idofboss].addNote:SetText(L["Edit note"])
                 end
@@ -1380,6 +1390,7 @@ function iwtb:OnEnable()
     -- arg1 = desire id, arg2 = boss id
     -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
     --old data layout - raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
+    dbBossCheck(raiderSelectedTier.instid, arg2)
     raiderDB.char.raids[raiderSelectedTier.instid][arg2].desireid = arg1
     -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
     --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
@@ -1517,13 +1528,11 @@ function iwtb:OnEnable()
   -- Raid welcome
   local function enterInstance(e, name)
     if db.char.showPopup and GetRaidDifficultyID() == 16 then
-      print("BOSS_KILL listening")
       iwtb:RegisterEvent("BOSS_KILL", bossKilled)
     end
   end
   
   local function leftGroup()
-    print("BOSS_KILL stop listening")
     iwtb:UnregisterEvent("BOSS_KILL")
   end
   
@@ -1913,6 +1922,7 @@ function iwtb:OnEnable()
     button2 = "No",
     OnAccept = function()
         raidLeaderDB:ResetDB()
+        rlProfileDB:ResetDB()
     end,
     timeout = 0,
     whileDead = true,
