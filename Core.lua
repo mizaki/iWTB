@@ -459,7 +459,6 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].note:ClearAllPoints()
     rlOoRcontentSlots[n].note:SetPoint("BOTTOMRIGHT", 0, 1)
     
-    --local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
     texture = rlOoRcontentSlots[n].note:CreateTexture("iwtboornotetex")
     texture:SetWidth(16)
     texture:SetHeight(16)
@@ -497,7 +496,6 @@ local function drawOoR(ooRraiders)
         -- Add another slot
         createOoRSlot(i, name, nametbl.desireid, nametbl.notetxt)
       else
-        --local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
         -- Reuse slot
         rlOoRcontentSlots[i].nameText:SetText(name)
         rlOoRcontentSlots[i].desireTag.text:SetText(desire[nametbl.desireid] or L["Unknown desire"])
@@ -609,7 +607,7 @@ local function raidUpdate(self)
     if not found then
       -- Check desire for boss - expacid depreciated
       local desireid = hasDesire(rldbName, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
-      local hasNote, noteTxt = hasNote(rldbName, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid)) -- TODO: enter note to avoid calling again in drawOoR()
+      local hasNote, noteTxt = hasNote(rldbName, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
       if desireid or hasNote then
         ooRraiders[rldbName] = {}
         if desireid then ooRraiders[rldbName].desireid = desireid end
