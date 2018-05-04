@@ -1577,9 +1577,9 @@ function iwtb:OnEnable()
   windowframe:SetMovable(true)
   
   fontstring = windowframe:CreateFontString("iwtbtitletext")
-  fontstring:SetPoint("TOPRIGHT", -25, -5)
+  fontstring:SetPoint("BOTTOMRIGHT", -10, 1)
   fontstring:SetTextColor(0.8,0.8,0.8,0.7)
-  fontstring:SetFontObject("InvoiceFont_Small")
+  fontstring:SetFontObject("SystemFont_NamePlate")
   fontstring:SetText(L["Version: "] .. GetAddOnMetadata("iwtb", "version"))
   
   windowframe.verTxt = fontstring
