@@ -745,12 +745,10 @@ local iwtbLDB = LibStub("LibDataBroker-1.1"):NewDataObject("iwtb_icon", {
 		tooltip:AddLine("iWTB - I Want That Boss!");
 	end,
 	OnClick = function() 
-    if windowframe:IsShown() then
-      windowframe:Hide()
+    if windowframe.title:IsShown() then
       windowframe.title:Hide()
     else
       windowframe.title:Show()
-      windowframe:Show()
       raidUpdate()
     end 
   end,})
@@ -897,7 +895,7 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.ignoreAll end
       },
-      showOnStart = {
+      --[[showOnStart = {
         name = L["Show on start"],
         order = 3,
         desc = L["Show on addon when UI loads"],
@@ -911,7 +909,7 @@ function iwtb:OnInitialize()
                 end 
                 end,              
         get = function(info) return db.char.showOnStart end
-      },
+      },]]
       showPopup = {
         name = L["Show popup on kill"],
         order = 5,
@@ -1042,12 +1040,10 @@ function iwtb:OnInitialize()
   -- Show the GUI if no input is supplied, otherwise handle the chat input.
   function iwtb:ChatCommand(input)
     if not input or input:trim() == "" then
-      if windowframe:IsShown() then
-        windowframe:Hide()
+      if windowframe.title:IsShown() then
         windowframe.title:Hide()
       else
         windowframe.title:Show()
-        windowframe:Show()
         raidUpdate()
       end
     else
@@ -1569,40 +1565,19 @@ function iwtb:OnEnable()
     end
   end
   
-  windowframe = CreateFrame("Frame", "iwtbwindow", UIParent)
-  windowframe:SetWidth(GUIwindowSizeX)
-  windowframe:SetHeight(GUIwindowSizeY)
-  windowframe:SetPoint("CENTER", 0, 0)
-  windowframe:SetFrameStrata("DIALOG")
-  windowframe:SetMovable(true)
-  
-  fontstring = windowframe:CreateFontString("iwtbtitletext")
-  fontstring:SetPoint("BOTTOMRIGHT", -10, 1)
-  fontstring:SetTextColor(0.8,0.8,0.8,0.7)
-  fontstring:SetFontObject("SystemFont_NamePlate")
-  fontstring:SetText(L["Version: "] .. GetAddOnMetadata("iwtb", "version"))
-  
-  windowframe.verTxt = fontstring
-  
-  --tinsert(UISpecialFrames,"iwtbwindow")
-
-  windowframetexture = windowframe:CreateTexture("iwtbframetexture")
-  windowframetexture:SetAllPoints(windowframetexture:GetParent())
-  windowframetexture:SetColorTexture(0,0,0,0.5)
-  windowframe.texture = windowframetexture
-  
   -- title
   local title = CreateFrame("Button", "iwtbtitle", UIParent)
   title:SetWidth(GUItitleSizeX)
   title:SetHeight(GUItitleSizeY)
-  title:SetPoint("CENTER", windowframe, "TOP", 0, 0)
+  title:SetPoint("TOP", 0, -150)
   title:SetFrameStrata("DIALOG")
   title:EnableMouse(true)
+  title:SetMovable(true)
   title:RegisterForDrag("LeftButton")
   title:RegisterForClicks("LeftButtonUp")
-  title:SetScript("OnDragStart", function(s) windowframe:StartMoving() end)
-  title:SetScript("OnDragStop", function(s) windowframe:StopMovingOrSizing();end)
-  title:SetScript("OnHide", function(s) windowframe:StopMovingOrSizing() end)
+  title:SetScript("OnDragStart", function(s) s:StartMoving() end)
+  title:SetScript("OnDragStop", function(s) s:StopMovingOrSizing();end)
+  title:SetScript("OnHide", function(s) s:StopMovingOrSizing() end)
   title:SetScript("OnDoubleClick", function(s)
     if windowframe:IsShown() then windowframe:Hide() else windowframe:Show() end
   end)
@@ -1615,7 +1590,6 @@ function iwtb:OnEnable()
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("iWTB - I Want That Boss!")
-  windowframe.title = title
   
   button = CreateFrame("Button", "iwtbexit", title, "UIPanelCloseButton")
   button:SetWidth(40)
@@ -1624,13 +1598,31 @@ function iwtb:OnEnable()
   button:Enable()
   button:RegisterForClicks("LeftButtonUp")
   button:SetScript("OnClick", function(s)
-    windowframe:Hide()
     windowframe.title:Hide()
   end)
   
-  --tinsert(UISpecialFrames,"title")
+  -- Hide on esc
+  tinsert(UISpecialFrames,"iwtbtitle")
   
-  -- Tabs
+  windowframe = CreateFrame("Frame", "iwtbwindow", title)
+  windowframe:SetWidth(GUIwindowSizeX)
+  windowframe:SetHeight(GUIwindowSizeY)
+  windowframe:SetPoint("TOP", 0, -20)
+  windowframe:SetFrameStrata("DIALOG")
+  windowframe:SetMovable(true)
+  
+  fontstring = windowframe:CreateFontString("iwtbtitletext")
+  fontstring:SetPoint("BOTTOMRIGHT", -10, 1)
+  fontstring:SetTextColor(0.8,0.8,0.8,0.7)
+  fontstring:SetFontObject("SystemFont_NamePlate")
+  fontstring:SetText(L["Version: "] .. GetAddOnMetadata("iwtb", "version"))
+  
+  windowframe.title = title
+
+  windowframetexture = windowframe:CreateTexture("iwtbframetexture")
+  windowframetexture:SetAllPoints(windowframetexture:GetParent())
+  windowframetexture:SetColorTexture(0,0,0,0.5)
+  windowframe.texture = windowframetexture
   
   -- Tutorial frame
   tutorialFrame = CreateFrame("Frame", "iwtbtutorialframe", windowframe)
@@ -1690,6 +1682,10 @@ function iwtb:OnEnable()
       if not s:GetChecked() then db.char.showTutorial = false else db.char.showTutorial = true end
     end
   )
+  
+  ---------- 
+  -- Tabs --
+  ----------
   
   -- Raider tab
   raiderTab = CreateFrame("Frame", "iwtbraidertab", windowframe)
@@ -1792,7 +1788,6 @@ function iwtb:OnEnable()
   raiderCloseButton:Enable()
   raiderCloseButton:RegisterForClicks("LeftButtonUp")
   raiderCloseButton:SetScript("OnClick", function(s)
-    windowframe:Hide()
     windowframe.title:Hide()
   end)
   
@@ -2104,7 +2099,6 @@ function iwtb:OnEnable()
   rlCloseButton:Enable()
   rlCloseButton:RegisterForClicks("LeftButtonUp")
   rlCloseButton:SetScript("OnClick", function(s)
-    windowframe:Hide()
     windowframe.title:Hide()
   end)
   
@@ -2250,7 +2244,6 @@ function iwtb:OnEnable()
   optionsButton:Enable()
   optionsButton:RegisterForClicks("LeftButtonUp")
   optionsButton:SetScript("OnClick", function(s)
-    windowframe:Hide()
     windowframe.title:Hide()
     InterfaceCategoryList_Update()
     InterfaceOptionsOptionsFrame_RefreshCategories()
@@ -2416,14 +2409,9 @@ function iwtb:OnEnable()
   raiderTab:Show()  -- Show page 1.
   rlTab:Hide()  -- Hide all other pages (in this case only one).
   
-  -- Hide on esc
-  --tinsert(UISpecialFrames,"iwtbwindow")
-  --tinsert(UISpecialFrames,"iwtbtitle")
-  
   -- Hide or show main window on start via options
-  if not db.char.showOnStart then
-    windowframe:Hide()
-    windowframe.title:Hide()
+  if db.char.showOnStart then
+    windowframe.title:Show()
   end
   
   -- Set the dropdowns programmatically. Allow this via options?
