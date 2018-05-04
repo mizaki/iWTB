@@ -1497,7 +1497,7 @@ function iwtb:OnEnable()
       bossKillWantDropDown_OnClick(bossKillPopup.desireDrop.Button, desireofboss, idofboss)
       
       -- Start timer to hide popup window
-      self:ScheduleTimer("hideKillPopup", db.char.autohideKillTime)
+      if db.char.autohideKillpopup then self:ScheduleTimer("hideKillPopup", db.char.autohideKillTime) end
     end
   end
   
