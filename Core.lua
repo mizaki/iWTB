@@ -2426,7 +2426,6 @@ function iwtb:OnEnable()
   iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", raidUpdate)
   iwtb:RegisterEvent("RAID_INSTANCE_WELCOME", enterInstance)
   iwtb:RegisterEvent("GROUP_LEFT", leftGroup)
-  iwtb:RegisterEvent("GROUP_JOINED", eventfired)
   iwtb:RegisterEvent("PLAYER_ENTERING_WORLD", playerEnteringWorld)
 
 end
