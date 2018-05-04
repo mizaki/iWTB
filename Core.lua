@@ -410,7 +410,7 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[i]:Hide()
   end
   
-  local function createOoRSlot(n, name, desireid)
+  local function createOoRSlot(n, name, desireid, notetxt)
     rlOoRcontentSlots[n] = CreateFrame("Button", "iwtbrloorslot" .. n, rlRaiderNotListFrame.rlOoRcontent) 
     rlOoRcontentSlots[n]:SetSize(GUIgrpSlotSizeX, GUIgrpSlotSizeY)
     rlOoRcontentSlots[n]:SetPoint("TOPLEFT", 4, -(GUIgrpSlotSizeY * (n-1)))
@@ -450,7 +450,7 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].desireTag.text:SetJustifyV("BOTTOM")
     --rlOoRcontentSlots[n].desireTag.text:SetFont(GUIfont, 10, "")
     rlOoRcontentSlots[n].desireTag.text:SetFontObject("SpellFont_Small")
-    rlOoRcontentSlots[n].desireTag.text:SetText(desire[desireid])
+    rlOoRcontentSlots[n].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
     
     -- note
     rlOoRcontentSlots[n].note = CreateFrame("Frame", "iwtboorslotnote" .. n, rlOoRcontentSlots[n].desireTag)
@@ -459,21 +459,21 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].note:ClearAllPoints()
     rlOoRcontentSlots[n].note:SetPoint("BOTTOMRIGHT", 0, 1)
     
-    local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
+    --local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
     texture = rlOoRcontentSlots[n].note:CreateTexture("iwtboornotetex")
     texture:SetWidth(16)
     texture:SetHeight(16)
     texture:SetPoint("TOPLEFT", 0, 0)
     texture:SetDrawLayer("ARTWORK",7)
-    if hasNote then
+    if notetxt then
       texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
+      rlOoRcontentSlots[n].note:SetAttribute("hasNote", true)
+      rlOoRcontentSlots[n].note:SetAttribute("noteTxt", notetxt)
     else
       texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
     end
     rlOoRcontentSlots[n].note.texture = texture
     
-    rlOoRcontentSlots[n].note:SetAttribute("hasNote", true)
-    rlOoRcontentSlots[n].note:SetAttribute("noteTxt", noteTxt)
     rlOoRcontentSlots[n].note:SetScript("OnEnter", function(s)
                                 GameTooltip:SetOwner(s)
                                 if rlOoRcontentSlots[n].note:GetAttribute("hasNote") then
@@ -481,7 +481,7 @@ local function drawOoR(ooRraiders)
                                   GameTooltip:Show()
                                 end
                               end)
-		rlOoRcontentSlots[n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
+    rlOoRcontentSlots[n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
     
     -- Context menu
     rlOoRcontentSlots[n]:RegisterForClicks("RightButtonUp")
@@ -492,20 +492,20 @@ local function drawOoR(ooRraiders)
   
   if next(ooRraiders) ~= nil then
     local i = 1
-    for name,desireid in pairs(ooRraiders) do -- [name] = desireid
+    for name,nametbl in pairs(ooRraiders) do -- [name] = desireid
       if i > curSlots then
         -- Add another slot
-        createOoRSlot(i, name, desireid)
+        createOoRSlot(i, name, nametbl.desireid, nametbl.notetxt)
       else
-        local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
+        --local hasNote, noteTxt = hasNote(name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
         -- Reuse slot
         rlOoRcontentSlots[i].nameText:SetText(name)
-        rlOoRcontentSlots[i].desireTag.text:SetText(desire[desireid])
+        rlOoRcontentSlots[i].desireTag.text:SetText(desire[nametbl.desireid] or L["Unknown desire"])
         
-        if hasNote then
+        if nametbl.notetxt then
           rlOoRcontentSlots[i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
           rlOoRcontentSlots[i].note:SetAttribute("hasNote", true)
-          rlOoRcontentSlots[i].note:SetAttribute("noteTxt", noteTxt)
+          rlOoRcontentSlots[i].note:SetAttribute("noteTxt", nametbl.notetxt)
         else
           rlOoRcontentSlots[i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
           rlOoRcontentSlots[i].note:SetAttribute("hasNote", false)
@@ -609,8 +609,11 @@ local function raidUpdate(self)
     if not found then
       -- Check desire for boss - expacid depreciated
       local desireid = hasDesire(rldbName, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
-      if desireid then
-        ooRraiders[rldbName] = desireid
+      local hasNote, noteTxt = hasNote(rldbName, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid)) -- TODO: enter note to avoid calling again in drawOoR()
+      if desireid or hasNote then
+        ooRraiders[rldbName] = {}
+        if desireid then ooRraiders[rldbName].desireid = desireid end
+        if hasNote then ooRraiders[rldbName].notetxt = noteTxt end
         ooRCount = ooRCount +1
       end
     end
