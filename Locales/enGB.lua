@@ -5,6 +5,7 @@ print("Loading enGB")
 local L = LibStub("AceLocale-3.0"):NewLocale("iWTB", "enGB", true)
 
 -- General
+L["Version: "] = true
 L["Raider"] = true
 L["Raid Leader"] = true
 L["Expansion"] = true

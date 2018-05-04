@@ -1575,6 +1575,14 @@ function iwtb:OnEnable()
   windowframe:SetFrameStrata("DIALOG")
   windowframe:SetMovable(true)
   
+  fontstring = windowframe:CreateFontString("iwtbtitletext")
+  fontstring:SetPoint("TOPRIGHT", -25, -5)
+  fontstring:SetTextColor(0.8,0.8,0.8,0.7)
+  fontstring:SetFontObject("InvoiceFont_Small")
+  fontstring:SetText(L["Version: "] .. GetAddOnMetadata("iwtb", "version"))
+  
+  windowframe.verTxt = fontstring
+  
   --tinsert(UISpecialFrames,"iwtbwindow")
 
   windowframetexture = windowframe:CreateTexture("iwtbframetexture")
