@@ -1242,7 +1242,8 @@ function iwtb:OnEnable()
             --if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
             --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~= nil then
             if raiderDB.char.raids[raiderSelectedTier.instid] ~= nil
-            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~= nil then
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~= nil
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid then
               L_UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid])
             else
               L_UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
