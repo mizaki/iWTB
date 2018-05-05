@@ -1067,7 +1067,7 @@ function iwtb:OnInitialize()
     else
       local cmd, arg = strsplit(" ", input)
       if cmd == "debugp" then
-        rlProfileDB:SetProfile("Renyou - Shadowsong")
+        --rlProfileDB:SetProfile("Renyou - Shadowsong")
         --iwtb.rlProfileDB = LibStub("AceDB-3.0"):New("iWTBrlProfileDB", rlProfileDefaults)
         --rlProfileDB = self.rlProfileDB
       else
@@ -1606,21 +1606,32 @@ function iwtb:OnEnable()
   texture:SetAllPoints(title)
   texture:SetColorTexture(0,0,0,1)
   fontstring = title:CreateFontString("iwtbtitletext")
-  fontstring:SetAllPoints(title)
+  fontstring:SetPoint("CENTER", -5, 0)
   fontstring:SetFont("Fonts\\FRIZQT__.TTF", 12, "")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
   fontstring:SetText("iWTB - I Want That Boss!")
   
-  button = CreateFrame("Button", "iwtbexit", title, "UIPanelCloseButton")
-  button:SetWidth(40)
-  button:SetHeight(40)
-  button:SetPoint("CENTER", button:GetParent(), "TOPRIGHT", 0, 0)
+  button = CreateFrame("Button", "iwtbexit", title)
+  button:SetWidth(12)
+  button:SetHeight(12)
+  button:SetPoint("CENTER", button:GetParent(), "TOPRIGHT", -8, -8)
   button:Enable()
   button:RegisterForClicks("LeftButtonUp")
   button:SetScript("OnClick", function(s)
     windowframe.title:Hide()
   end)
+  button:SetScript("OnEnter", function(s) s.texture:SetGradientAlpha("VERTICAL", 1, 1, 1, 0.5, 1, 1, 1, 1) end)
+  button:SetScript("OnLeave", function(s) s.texture:SetGradientAlpha("VERTICAL", 1, 1, 1, 0.5, 1, 1, 1, .7) end)
+  --button:Show()
+  
+  texture = button:CreateTexture("iwtbclosebuttex")
+  texture:SetTexture("Interface\\AddOns\\iWTB\\Media\\Textures\\close_white_16x16.tga")
+  texture:SetSize(12,12)
+  texture:SetGradientAlpha("VERTICAL", 1, 1, 1, 0.5, 1, 1, 1, .7)
+  texture:SetPoint("CENTER")
+  --texture:Show()
+  button.texture = texture
   
   -- Hide on esc
   tinsert(UISpecialFrames,"iwtbtitle")
