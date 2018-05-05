@@ -895,6 +895,24 @@ function iwtb:OnInitialize()
                 end,              
         get = function(info) return db.char.ignoreAll end
       },
+      useProfileData = {
+        name = L["Use raid leader data from:"],
+        order = 14,
+        desc = L["Use the raid leader data from another profile\/character"],
+        width = "normal",
+        type = "select",
+        values = rlProfileDB:GetProfiles(),
+        set = function(info, key, val)
+                  rlProfileDB:SetProfile(rlProfileDB:GetProfiles()[key])
+                end,
+        get = function(info, key)
+                local curProfile = rlProfileDB:GetCurrentProfile()
+                local profiles, numProfiles = rlProfileDB:GetProfiles()
+                for i=1, numProfiles do
+                  if curProfile == profiles[i] then return i end
+                end
+              end
+      },
       --[[showOnStart = {
         name = L["Show on start"],
         order = 3,
@@ -1049,6 +1067,9 @@ function iwtb:OnInitialize()
     else
       local cmd, arg = strsplit(" ", input)
       if cmd == "debugp" then
+        rlProfileDB:SetProfile("Renyou - Shadowsong")
+        --iwtb.rlProfileDB = LibStub("AceDB-3.0"):New("iWTBrlProfileDB", rlProfileDefaults)
+        --rlProfileDB = self.rlProfileDB
       else
         --print("cmd: ", cmd, " arg: ", arg)
         --LibStub("AceConfigCmd-3.0").HandleCommand(iwtb, "iwtb", "syncOnJoin", input)

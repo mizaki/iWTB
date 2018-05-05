@@ -66,6 +66,8 @@ L["Hide kill window after:"] = true
 L["Automatically hide boss kill window time (in secs)"] = true
 L["Enter upto three numbers, e.g. 45, 60, 120"] = true
 L["If checked, will automatically hide this window after the set interval"] = true
+L["Use raid leader data from:"] = true
+L["Use the raid leader data from another profile\/character"] = true
 
 -- Status messages
 L["Received update - "] = true
