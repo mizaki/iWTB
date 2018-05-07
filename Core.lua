@@ -1522,7 +1522,8 @@ function iwtb:OnEnable()
   
   -- Raid welcome
   local function enterInstance(e, name)
-    if db.char.showPopup and GetRaidDifficultyID() == 16 then
+    local _, instType, diffId = GetInstanceInfo()
+    if instType == "raid" and db.char.showPopup and diffId == 16 then
       iwtb:RegisterEvent("BOSS_KILL", bossKilled)
     end
   end
