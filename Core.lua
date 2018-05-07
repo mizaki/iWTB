@@ -474,7 +474,7 @@ local function drawOoR(ooRraiders)
     rlOoRcontentSlots[n].note.texture = texture
     
     rlOoRcontentSlots[n].note:SetScript("OnEnter", function(s)
-                                GameTooltip:SetOwner(s)
+                                GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
                                 if rlOoRcontentSlots[n].note:GetAttribute("hasNote") then
                                   GameTooltip:AddLine(rlOoRcontentSlots[n].note:GetAttribute("noteTxt"))
                                   GameTooltip:Show()
@@ -1205,10 +1205,13 @@ function iwtb:OnEnable()
             bossFrame[idofboss].addNote:SetWidth(129)
             bossFrame[idofboss].addNote:SetHeight(20)
             bossFrame[idofboss].addNote:SetPoint("BOTTOMRIGHT", -3, 1)
+            
+            local bossHasNote = false
             if raiderDB.char.raids[raiderSelectedTier.instid]
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss]
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note ~= "" then
+              bossHasNote = true
               bossFrame[idofboss].addNote:SetText(L["Edit note"])
             else
               bossFrame[idofboss].addNote:SetText(L["Add note"])
@@ -1246,7 +1249,14 @@ function iwtb:OnEnable()
               end)
               bossFrame[idofboss].addNote.editbox = editbox
             end)
-            
+            bossFrame[idofboss].addNote:SetScript("OnEnter", function(s)
+                                GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
+                                if bossHasNote then
+                                  GameTooltip:AddLine(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note)
+                                  GameTooltip:Show()
+                                end
+                              end)
+            bossFrame[idofboss].addNote:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
             
       
             -- add dropdown menu for need/minor/os etc.
@@ -2082,7 +2092,7 @@ function iwtb:OnEnable()
       grpMemSlotFrame[i][n].note:SetAttribute("hasNote", false)
       grpMemSlotFrame[i][n].note:SetAttribute("noteTxt", "")
       grpMemSlotFrame[i][n].note:SetScript("OnEnter", function(s)
-                                  GameTooltip:SetOwner(s)
+                                  GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
                                   if grpMemSlotFrame[i][n].note:GetAttribute("hasNote") then
                                     GameTooltip:AddLine(grpMemSlotFrame[i][n].note:GetAttribute("noteTxt"))
                                     GameTooltip:Show()
