@@ -1476,7 +1476,7 @@ function iwtb:OnEnable()
   
   -- BOSS_KILL
   local function bossKilled(e, id, name)
-    local curInst = EJ_GetCurrentInstance() -- 946, antorus
+    local curInst = EJ_GetCurrentInstance() -- 946, antorus - For 8.0 use EJ_GetInstanceForMap(C_Map.GetBestMapForUnit("player"))
     --for testing
     if curInst == 0 then curInst = 946 end
     
@@ -2388,8 +2388,6 @@ function iwtb:OnEnable()
   bossKillPopupTest:Enable()
   bossKillPopupTest:RegisterForClicks("LeftButtonUp")
   bossKillPopupTest:SetScript("OnClick", function(s)
-    print(bossKillInfo.bossid)
-    print(bossKillPopupSelectedDesireId)
     bossKillPopup:ClearAllPoints()
     bossKillPopup:SetPoint("RIGHT", -80, -220)
     --buildInstances()
