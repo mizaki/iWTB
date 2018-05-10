@@ -1653,6 +1653,7 @@ function iwtb:OnEnable()
   windowframe:SetPoint("TOP", 0, -20)
   windowframe:SetFrameStrata("DIALOG")
   windowframe:SetMovable(true)
+  windowframe:EnableMouse(true)
   
   fontstring = windowframe:CreateFontString("iwtbtitletext")
   fontstring:SetPoint("BOTTOMRIGHT", -10, 1)
