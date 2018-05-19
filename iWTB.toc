@@ -9,7 +9,7 @@
 
 embeds.xml
 
---Locale Translations
+## Locale Translations
 Locales\Locales.xml
 
 

@@ -16,10 +16,10 @@ local function printTable(table)
 end
 
 -- Comms channel prefixes
-XFER_HASH = "IWTB_XFER_HASH"
-REQUEST_DATA = "IWTB_REQ_DATA"
---UPDATE_HASH = "IWTB_UPDATE_HASH"
-XFER_DATA = "IWTB_XFER_DATA"
+local XFER_HASH = "IWTB_XFER_HASH"
+local REQUEST_DATA = "IWTB_REQ_DATA"
+--local UPDATE_HASH = "IWTB_UPDATE_HASH"
+local XFER_DATA = "IWTB_XFER_DATA"
 
 iwtb.hashData = function (data)
   local serData = Serializer:Serialize(data)

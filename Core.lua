@@ -31,6 +31,7 @@ local raiderBossesStr = "" -- raider boss desire seralised
 local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
 local bossKillInfo = {bossid = 0, desireid = 0, expacid = 0, instid = 0}
+local rlProfileDB
 
 local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
 local rlSelectedTier = {} -- Must be a better way but cba for now.
@@ -381,6 +382,43 @@ function iwtb.isGuildMember(name)
   return false
 end
 
+-- Right click menu for raid/OoR slots
+local function slotDropDown_Menu(frame, level, menuList)
+  local fname = string.match(frame:GetName(), "%a+")
+  if fname == "iwtbslotcmenu" and slotIsEmpty(frame:GetParent()) then
+    return
+  else
+    local name = frame:GetParent().nameText:GetText()
+    local info
+    info = L_UIDropDownMenu_CreateInfo()
+    info.text = name
+    info.isTitle = true
+    info.notCheckable = true
+    L_UIDropDownMenu_AddButton(info)
+    
+    info = L_UIDropDownMenu_CreateInfo()
+    info.func = removeRaiderData
+    info.text = L["Remove data"]
+    info.arg1 = name
+    info.notCheckable = true
+    L_UIDropDownMenu_AddButton(info)
+    
+    if fname == "iwtbslotcmenu" then
+      info = L_UIDropDownMenu_CreateInfo()
+      info.func = function(s, arg1, arg2, checked) UninviteUnit(name) end
+      info.text = L["Remove"]
+      info.arg1 = name
+      info.notCheckable = true
+      L_UIDropDownMenu_AddButton(info)
+    end
+    
+    info = L_UIDropDownMenu_CreateInfo()
+    info.text = L["Cancel"]
+    info.notCheckable = true
+    L_UIDropDownMenu_AddButton(info)
+  end
+end
+  
 local function hasNote(name, tier, boss) -- compare the player name to the rl db to see if they have a note for the selected boss
   -- First check if the player is in rl db
   for tname, rldb in pairs(rlProfileDB.profile.raiders) do
@@ -822,7 +860,7 @@ function iwtb:OnInitialize()
   rankInfo = getGuildRanks()
   expacInfo = getExpansions()
   
-  options = {
+  local options = {
     type = "group",
     args = {
       settingsHeaderGUI = {
@@ -1097,6 +1135,47 @@ function iwtb:OnEnable()
   local texture
   
   raidsInfo = buildInstances()
+
+  --------------------------------------------------------------------
+  -- DESIRABILITY MENU FUNCTIONS
+  --------------------------------------------------------------------
+  
+  local function bossWantDropDown_OnClick(self, arg1, arg2, checked)
+    -- arg1 = desire id, arg2 = boss id
+    -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
+    --old data layout - raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
+    dbBossCheck(raiderSelectedTier.instid, arg2)
+    raiderDB.char.raids[raiderSelectedTier.instid][arg2].desireid = arg1
+    -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
+    --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
+    
+    -- Set dropdown text to new selection
+    L_UIDropDownMenu_SetSelectedID(bossFrame[arg2].dropdown, self:GetID())
+    
+    -- Update hash
+    raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids) -- Do we want to hash here? Better to do it before sending or on request?
+  end
+    
+  -- Fill menu with desirability list
+  local function bossWantDropDown_Menu(frame, level, menuList)
+    local info = L_UIDropDownMenu_CreateInfo()
+    local idofboss = string.match(frame:GetName(), "%d+")
+    info.func = bossWantDropDown_OnClick
+    for desireid, name in pairs(desire) do
+      info.text, info.arg1, info.arg2 = name, desireid, idofboss
+      --if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
+      --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~=nil
+      --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] == desireid then
+      if raiderDB.char.raids[raiderSelectedTier.instid] ~= nil
+      and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~=nil
+      and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid == desireid then
+        info.checked = true
+      else
+        info.checked = false
+      end
+      L_UIDropDownMenu_AddButton(info)
+    end
+  end
   
   -- What to do when item is clicked
   local function raidsDropdownMenuOnClick(self, arg1, arg2, checked)
@@ -1393,47 +1472,6 @@ function iwtb:OnEnable()
   end
   
   --------------------------------------------------------------------
-  -- DESIRABILITY MENU FUNCTIONS
-  --------------------------------------------------------------------
-  
-  local function bossWantDropDown_OnClick(self, arg1, arg2, checked)
-    -- arg1 = desire id, arg2 = boss id
-    -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
-    --old data layout - raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
-    dbBossCheck(raiderSelectedTier.instid, arg2)
-    raiderDB.char.raids[raiderSelectedTier.instid][arg2].desireid = arg1
-    -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
-    --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
-    
-    -- Set dropdown text to new selection
-    L_UIDropDownMenu_SetSelectedID(bossFrame[arg2].dropdown, self:GetID())
-    
-    -- Update hash
-    raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids) -- Do we want to hash here? Better to do it before sending or on request?
-  end
-    
-  -- Fill menu with desirability list
-  function bossWantDropDown_Menu(frame, level, menuList)
-    local info = L_UIDropDownMenu_CreateInfo()
-    local idofboss = string.match(frame:GetName(), "%d+")
-    info.func = bossWantDropDown_OnClick
-    for desireid, name in pairs(desire) do
-      info.text, info.arg1, info.arg2 = name, desireid, idofboss
-      --if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
-      --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~=nil
-      --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] == desireid then
-      if raiderDB.char.raids[raiderSelectedTier.instid] ~= nil
-      and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~=nil
-      and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid == desireid then
-        info.checked = true
-      else
-        info.checked = false
-      end
-      L_UIDropDownMenu_AddButton(info)
-    end
-  end
-
-  --------------------------------------------------------------------
   -- KILL POPUP BOSS MENU FUNCTIONS
   --------------------------------------------------------------------
   
@@ -1560,42 +1598,6 @@ function iwtb:OnEnable()
     --L_UIDropDownMenu_SetSelectedID(bossFrame[arg2]:GetChildren(), self:GetID())
   end
   
-  -- Right click menu for raid/OoR slots
-  function slotDropDown_Menu(frame, level, menuList)
-    local fname = string.match(frame:GetName(), "%a+")
-    if fname == "iwtbslotcmenu" and slotIsEmpty(frame:GetParent()) then
-      return
-    else
-      local name = frame:GetParent().nameText:GetText()
-      local info
-      info = L_UIDropDownMenu_CreateInfo()
-      info.text = name
-      info.isTitle = true
-      info.notCheckable = true
-      L_UIDropDownMenu_AddButton(info)
-      
-      info = L_UIDropDownMenu_CreateInfo()
-      info.func = removeRaiderData
-      info.text = L["Remove data"]
-      info.arg1 = name
-      info.notCheckable = true
-      L_UIDropDownMenu_AddButton(info)
-      
-      if fname == "iwtbslotcmenu" then
-        info = L_UIDropDownMenu_CreateInfo()
-        info.func = function(s, arg1, arg2, checked) UninviteUnit(name) end
-        info.text = L["Remove"]
-        info.arg1 = name
-        info.notCheckable = true
-        L_UIDropDownMenu_AddButton(info)
-      end
-      
-      info = L_UIDropDownMenu_CreateInfo()
-      info.text = L["Cancel"]
-      info.notCheckable = true
-      L_UIDropDownMenu_AddButton(info)
-    end
-  end
   
   -- title
   local title = CreateFrame("Button", "iwtbtitle", UIParent)
@@ -1663,13 +1665,13 @@ function iwtb:OnEnable()
   
   windowframe.title = title
 
-  windowframetexture = windowframe:CreateTexture("iwtbframetexture")
-  windowframetexture:SetAllPoints(windowframetexture:GetParent())
-  windowframetexture:SetColorTexture(0,0,0,0.5)
-  windowframe.texture = windowframetexture
+  texture = windowframe:CreateTexture("iwtbframetexture")
+  texture:SetAllPoints(texture:GetParent())
+  texture:SetColorTexture(0,0,0,0.5)
+  windowframe.texture = texture
   
   -- Tutorial frame
-  tutorialFrame = CreateFrame("Frame", "iwtbtutorialframe", windowframe)
+  local tutorialFrame = CreateFrame("Frame", "iwtbtutorialframe", windowframe)
   tutorialFrame:SetWidth(GUItabWindowSizeX-30)
   tutorialFrame:SetHeight(GUItabWindowSizeY-30)
   tutorialFrame:SetFrameStrata("FULLSCREEN")
@@ -1678,7 +1680,7 @@ function iwtb:OnEnable()
   texture:SetAllPoints(tutorialFrame)
   texture:SetColorTexture(0.1,0.1,0.1,1)
   
-  tutorialHTML = CreateFrame("SimpleHTML", "iwtbtutorialhtml", tutorialFrame)
+  local tutorialHTML = CreateFrame("SimpleHTML", "iwtbtutorialhtml", tutorialFrame)
   tutorialHTML:SetWidth(GUItabWindowSizeX-100)
   tutorialHTML:SetHeight(GUItabWindowSizeY-100)
   tutorialHTML:SetPoint("CENTER", 0, 0)
@@ -1716,7 +1718,7 @@ function iwtb:OnEnable()
   if not db.char.showTutorial then tutorialFrame:Hide() end
 
   -- Checkbox, hide show on start
-  tutorialCheckButton = CreateFrame("CheckButton", "iwtbtutorialcheckbutton", tutorialFrame, "ChatConfigCheckButtonTemplate")
+  local tutorialCheckButton = CreateFrame("CheckButton", "iwtbtutorialcheckbutton", tutorialFrame, "ChatConfigCheckButtonTemplate")
   tutorialCheckButton:SetPoint("BOTTOMLEFT", 10, 10)
   tutorialCheckButton:SetChecked(db.char.showTutorial)
   iwtbtutorialcheckbuttonText:SetText(L["Show on start"])
@@ -1808,6 +1810,7 @@ function iwtb:OnEnable()
   raiderTestButton:SetPoint("BOTTOMLEFT", 270, 30)
   texture = raiderTestButton:CreateTexture("raidertestbuttex")
   texture:SetAllPoints(raiderTestButton)
+  raiderTestButton.texture = texture
   raiderTestButton:Enable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
@@ -1816,7 +1819,9 @@ function iwtb:OnEnable()
     --print("autohideTime: ",db.char.autohideKillTime)
     --bossKillPopup:Show()
   end)
-  raiderTestButton:Hide()
+  raiderTestButton:SetScript("OnEnter", function(s) s.texture:SetTexture(GlowBorderTemplate) end)
+  raiderTestButton:SetScript("OnLeave", function(s) s.texture:SetTexture(texture) end)
+  --raiderTestButton:Hide()
   
   -- Raider close button
   local raiderCloseButton = CreateFrame("Button", "iwtbraiderclosebutton", raiderTab, "UIPanelButtonTemplate")
@@ -2431,7 +2436,7 @@ function iwtb:OnEnable()
   bossKillPopup.desireDrop = bossKillPopupDesireDrop
   
   -- Auto close tick box
-  bossKillPopupButton = CreateFrame("CheckButton", "iwtbkillcheckbutton", bossKillPopupWindow, "ChatConfigCheckButtonTemplate")
+  local bossKillPopupButton = CreateFrame("CheckButton", "iwtbkillcheckbutton", bossKillPopupWindow, "ChatConfigCheckButtonTemplate")
   bossKillPopupButton:SetPoint("BOTTOMLEFT", 15, 5)
   bossKillPopupButton:SetChecked(db.char.autohideKillpopup)
   iwtbkillcheckbuttonText:SetText(L["Automatically hide"])
