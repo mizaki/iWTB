@@ -7,6 +7,7 @@ local L = iwtb.L
 local db
 local raiderDB
 local raidLeaderDB
+local rlProfileDB
 local rankInfo = {} -- Guild rank info
 local expacInfo = nil -- Expacs for dropdown
 local raidsInfo = nil -- RaidID = ExpacID, for use on bosskillpopup
@@ -31,7 +32,6 @@ local raiderBossesStr = "" -- raider boss desire seralised
 local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
 local bossKillInfo = {bossid = 0, desireid = 0, expacid = 0, instid = 0}
-local rlProfileDB
 
 local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
 local rlSelectedTier = {} -- Must be a better way but cba for now.
