@@ -2187,8 +2187,8 @@ function iwtb:OnEnable()
     self:GetParent():SetVerticalScroll(value)
   end)
   local scrollbg = rlOoRscrollbar:CreateTexture(nil, "BACKGROUND")
-  scrollbg:SetAllPoints(scrollbar)
-  scrollbg:SetTexture(0, 0, 0, 0.4)
+  scrollbg:SetAllPoints(rlOoRscrollbar)
+  scrollbg:SetColorTexture(0.2, 0.2, 0.2, 0.4)
   rlRaiderNotListFrame.rlOoRscrollbar = rlOoRscrollbar
 
   -- Content frame
@@ -2203,7 +2203,6 @@ function iwtb:OnEnable()
   rlOoRcontent:SetPoint("TOPLEFT", 0, 0)
   local texture = rlOoRcontent:CreateTexture()
   texture:SetAllPoints(texture:GetParent())
-  texture:SetTexture(0, 0, 0.5, 1)
 
   rlRaiderNotListFrame:SetScrollChild(rlOoRcontent)
   rlRaiderNotListFrame.rlOoRcontent = rlOoRcontent
