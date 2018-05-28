@@ -3,6 +3,9 @@ local AceGUI = LibStub("AceGUI-3.0")
 iwtb.L = LibStub("AceLocale-3.0"):GetLocale("iWTB")
 local L = iwtb.L
 
+local next = next
+local wipe = wipe
+
 --Define some vars
 local db
 local raiderDB
@@ -13,28 +16,33 @@ local expacInfo = nil -- Expacs for dropdown
 local raidsInfo = nil -- RaidID = ExpacID, for use on bosskillpopup
 local tierRaidInstances = nil -- Raid instances for raider tab dropdown
 local tierRLRaidInstances = nil 
-local instanceBosses = nil -- Bosses for RL tab dropdown
+iwtb.instanceBosses = nil -- Bosses for RL tab dropdown
 local frame
-local windowframe -- main frame
-local raiderTab -- raider tab frame
-local rlTab -- raid leader tab frame
+--local windowframe -- main frame
+--iwtb.raiderTab -- raider tab frame
+--local rlTab -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
 local rlRaiderListFrame -- main frame listing raiders spots
+--iwtb.rlRaiderOverviewFrame -- main frame listing raid leaders overview
+--local rlRaiderOverviewFrameSlots = {} -- raid leader overview slots
+--local rlRaiderOverviewFrameColumns = {} -- overview columns
+iwtb.rlRaiderOverviewListFrame = {} -- overview pages
+--local overviewCreatureFrame = {} -- Boss icon for overview columns
 local bossKillPopup -- Pop up frame for changing desire on boss kill
 local bossKillPopupSelectedDesireId = 0
-local grpMemFrame = {} -- table containing each frame per group
-local grpMemSlotFrame = {} -- table containing each frame per slot for each group
-local rlRaiderNotListFrame -- main frame listing raiders NOT in the raid but in the rl db
-local rlOoRcontentSlots = {} -- Out of Raid slots
+iwtb.grpMemFrame = {} -- table containing each frame per group
+iwtb.grpMemSlotFrame = {} -- table containing each frame per slot for each group
+--iwtb.rlRaiderNotListFrame -- main frame listing raiders NOT in the raid but in the rl db
+--local rlOoRcontentSlots = {} -- Out of Raid slots
 local bossFrame = {}-- table of frames containing each boss frame
 local raiderBossesStr = "" -- raider boss desire seralised
-local desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
+iwtb.desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
 local bossKillInfo = {bossid = 0, desireid = 0, expacid = 0, instid = 0}
 
 local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
-local rlSelectedTier = {} -- Must be a better way but cba for now.
+iwtb.rlSelectedTier = {} -- Must be a better way but cba for now.
 
 local rlStatusContent = {} -- RL status lines 1-10
 
@@ -46,9 +54,9 @@ local instanceRLButton = nil
 local bossesRLButton = nil
 
 -- GUI dimensions
-local GUIwindowSizeX = 800
+local GUIwindowSizeX = 850
 local GUIwindowSizeY = 700
-local GUItabWindowSizeX = 780
+local GUItabWindowSizeX = 830
 local GUItabWindowSizeY = 640
 local GUItitleSizeX = 200
 local GUItitleSizeY = 30
@@ -56,15 +64,13 @@ local GUItabButtonSizeX = 100
 local GUItabButtonSizeY = 30
 local GUIgrpSizeX = 579
 local GUIgrpSizeY = 51
-local GUIgrpSlotSizeX = 110
-local GUIgrpSlotSizeY = 45
+iwtb.GUIgrpSlotSizeX = 110
+iwtb.GUIgrpSlotSizeY = 45
 local GUIRStatusSizeX = 300 
 local GUIRStatusSizeY = 15
 local GUIkillWindowSizeX = 300
 local GUIkillWindowSizeY = 160
   
-local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
-
 
 -- API Calls and functions
 
@@ -294,7 +300,7 @@ local function getBosses(raidID, isRL)
   until finished
   
   if isRL then
-    instanceBosses = raidBosses
+    iwtb.instanceBosses = raidBosses
   else
     return raidBosses
   end
@@ -326,397 +332,6 @@ end
 ----------------------------------------------------------------
 ----------------------------------------------------------------
 ----------------------------------------------------------------
--- Lovingly "inspired" by RSUM
-local function FrameContainsPoint(frame, x, y)
-	local left, bottom, width, height = frame:GetRect()
-	if x >= left then
-		if y >= bottom then
-			if x <= left + width then
-				if y <= bottom + height then
-					return true
-				end
-			end
-		end
-	end
-	return false
-end
-
--- search for mouseover frame which is actually overlapped by the dragged frame - does not work correctly for slots in same grp if > dragged. Anchor point problem? Position on drag changes GetRect?
-local function MemberFrameContainsPoint(x, y)
-	if FrameContainsPoint(rlRaiderListFrame, x, y) then
-		for i=1,8 do
-			if FrameContainsPoint(grpMemFrame[i], x, y) then
-				for member=1,5 do
-					if FrameContainsPoint(grpMemSlotFrame[i][member], x, y) then
-						return i, member
-					end
-				end
-				return i, nil
-			end
-		end
-	end
-	return nil, nil
-end
-
-local function slotIsEmpty(f)
-  if f:GetAttribute("raidid") >0 then return false else return true end
-end
-
-local function grpHasEmpty(grp)
-  local result = false
-  for i=1, 5 do
-    if slotIsEmpty(grpMemSlotFrame[grp][i]) then
-      result = true
-      break
-    end
-  end
-  return result
-end
-
-function iwtb.isGuildMember(name)
-  local _, onlineGmem = GetNumGuildMembers()
-  if not string.find(name, "-") then name = name .. "-" .. GetRealmName() end -- Append realm name if missing
-  for i=1, onlineGmem do
-    if GetGuildRosterInfo(i) == name then return true end
-  end
-  return false
-end
-
--- Right click menu for raid/OoR slots
-local function slotDropDown_Menu(frame, level, menuList)
-  local fname = string.match(frame:GetName(), "%a+")
-  if fname == "iwtbslotcmenu" and slotIsEmpty(frame:GetParent()) then
-    return
-  else
-    local name = frame:GetParent().nameText:GetText()
-    local info
-    info = L_UIDropDownMenu_CreateInfo()
-    info.text = name
-    info.isTitle = true
-    info.notCheckable = true
-    L_UIDropDownMenu_AddButton(info)
-    
-    info = L_UIDropDownMenu_CreateInfo()
-    info.func = removeRaiderData
-    info.text = L["Remove data"]
-    info.arg1 = name
-    info.notCheckable = true
-    L_UIDropDownMenu_AddButton(info)
-    
-    if fname == "iwtbslotcmenu" then
-      info = L_UIDropDownMenu_CreateInfo()
-      info.func = function(s, arg1, arg2, checked) UninviteUnit(name) end
-      info.text = L["Remove"]
-      info.arg1 = name
-      info.notCheckable = true
-      L_UIDropDownMenu_AddButton(info)
-    end
-    
-    info = L_UIDropDownMenu_CreateInfo()
-    info.text = L["Cancel"]
-    info.notCheckable = true
-    L_UIDropDownMenu_AddButton(info)
-  end
-end
-  
-local function hasNote(name, tier, boss) -- compare the player name to the rl db to see if they have a note for the selected boss
-  -- First check if the player is in rl db
-  for tname, rldb in pairs(rlProfileDB.profile.raiders) do
-    if tname == name and rldb.raids ~= nil then
-      for tierid, tiers in pairs(rldb.raids) do
-        if tierid == tier then
-          for bossid, bosses in pairs(tiers) do
-            if bossid == boss then
-              if bosses.note and bosses.note ~= "" then return true, bosses.note end
-            end
-          end
-        end
-      end
-    end
-  end
-  return false, ""
-end
-
--- Add/draw Out of Raid slot for raider entry.
-local function drawOoR(ooRraiders)
-  -- Find number of current slots
-  local curSlots = rlRaiderNotListFrame.rlOoRcontent:GetNumChildren()
-  --local sloty = 0 -- This is the top padding
-  
-  -- Hide any current OoR slots
-  for i=1,curSlots do
-    rlOoRcontentSlots[i]:Hide()
-  end
-  
-  local function createOoRSlot(n, name, desireid, notetxt)
-    rlOoRcontentSlots[n] = CreateFrame("Button", "iwtbrloorslot" .. n, rlRaiderNotListFrame.rlOoRcontent) 
-    rlOoRcontentSlots[n]:SetSize(GUIgrpSlotSizeX, GUIgrpSlotSizeY)
-    rlOoRcontentSlots[n]:SetPoint("TOPLEFT", 4, -(GUIgrpSlotSizeY * (n-1)))
-    
-    rlOoRcontentSlots[n]:SetBackdrop({
-      bgFile = "Interface/Tooltips/UI-Tooltip-Background",
-      edgeFile = "Interface/Tooltips/UI-Tooltip-Border", 
-      tile = true, tileSize = 16, edgeSize = 16, 
-      insets = { left = 0, right = 0, top = 4, bottom = 4 }
-    })
-   
-    rlOoRcontentSlots[n]:SetBackdropColor(0.5,0,0,1)
-    rlOoRcontentSlots[n]:SetBackdropBorderColor(0.5,0.5,0,1)
-    
-    local fontstring = rlOoRcontentSlots[n]:CreateFontString()
-    fontstring:SetPoint("TOP", 0, -5)
-    fontstring:SetFontObject("Game12Font")
-    fontstring:SetJustifyH("CENTER")
-    fontstring:SetJustifyV("CENTER")
-    fontstring:SetText(name)
-    
-    rlOoRcontentSlots[n].nameText = fontstring
-    
-    -- desire label
-    rlOoRcontentSlots[n].desireTag = CreateFrame("Frame", "iwtboorslotdesire" .. n, rlOoRcontentSlots[n])
-    rlOoRcontentSlots[n].desireTag:SetWidth(GUIgrpSlotSizeX - 8)
-    rlOoRcontentSlots[n].desireTag:SetHeight((GUIgrpSlotSizeY /2) -4)
-    rlOoRcontentSlots[n].desireTag:ClearAllPoints()
-    rlOoRcontentSlots[n].desireTag:SetPoint("BOTTOM", 0, 4)
-    
-    local texture = rlOoRcontentSlots[n].desireTag:CreateTexture("iwtboorslottex")
-    texture:SetAllPoints(texture:GetParent())
-    texture:SetColorTexture(0,0,0.2,1)
-    rlOoRcontentSlots[n].desireTag.text = rlOoRcontentSlots[n].desireTag:CreateFontString("iwtboorslotfont" .. n)
-    rlOoRcontentSlots[n].desireTag.text:SetPoint("CENTER")
-    rlOoRcontentSlots[n].desireTag.text:SetJustifyH("CENTER")
-    rlOoRcontentSlots[n].desireTag.text:SetJustifyV("BOTTOM")
-    --rlOoRcontentSlots[n].desireTag.text:SetFont(GUIfont, 10, "")
-    rlOoRcontentSlots[n].desireTag.text:SetFontObject("SpellFont_Small")
-    rlOoRcontentSlots[n].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
-    
-    -- note
-    rlOoRcontentSlots[n].note = CreateFrame("Frame", "iwtboorslotnote" .. n, rlOoRcontentSlots[n].desireTag)
-    rlOoRcontentSlots[n].note:SetWidth(16)
-    rlOoRcontentSlots[n].note:SetHeight(16)
-    rlOoRcontentSlots[n].note:ClearAllPoints()
-    rlOoRcontentSlots[n].note:SetPoint("BOTTOMRIGHT", 0, 1)
-    
-    texture = rlOoRcontentSlots[n].note:CreateTexture("iwtboornotetex")
-    texture:SetWidth(16)
-    texture:SetHeight(16)
-    texture:SetPoint("TOPLEFT", 0, 0)
-    texture:SetDrawLayer("ARTWORK",7)
-    if notetxt then
-      texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
-      rlOoRcontentSlots[n].note:SetAttribute("hasNote", true)
-      rlOoRcontentSlots[n].note:SetAttribute("noteTxt", notetxt)
-    else
-      texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
-    end
-    rlOoRcontentSlots[n].note.texture = texture
-    
-    rlOoRcontentSlots[n].note:SetScript("OnEnter", function(s)
-                                GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
-                                if rlOoRcontentSlots[n].note:GetAttribute("hasNote") then
-                                  GameTooltip:AddLine(rlOoRcontentSlots[n].note:GetAttribute("noteTxt"))
-                                  GameTooltip:Show()
-                                end
-                              end)
-    rlOoRcontentSlots[n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
-    
-    -- Context menu
-    rlOoRcontentSlots[n]:RegisterForClicks("RightButtonUp")
-    rlOoRcontentSlots[n]:SetScript("OnClick", function(s) L_ToggleDropDownMenu(1, nil, s.dropdown, "cursor", -25, -10) end)
-    rlOoRcontentSlots[n].dropdown = CreateFrame("Frame", "iwtbcmenu" .. n , rlOoRcontentSlots[n], "L_UIDropDownMenuTemplate")
-    L_UIDropDownMenu_Initialize(rlOoRcontentSlots[n].dropdown, slotDropDown_Menu)
-  end
-  
-  if next(ooRraiders) ~= nil then
-    local i = 1
-    for name,nametbl in pairs(ooRraiders) do -- [name] = desireid
-      if i > curSlots then
-        -- Add another slot
-        createOoRSlot(i, name, nametbl.desireid, nametbl.notetxt)
-      else
-        -- Reuse slot
-        rlOoRcontentSlots[i].nameText:SetText(name)
-        rlOoRcontentSlots[i].desireTag.text:SetText(desire[nametbl.desireid] or L["Unknown desire"])
-        
-        if nametbl.notetxt then
-          rlOoRcontentSlots[i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
-          rlOoRcontentSlots[i].note:SetAttribute("hasNote", true)
-          rlOoRcontentSlots[i].note:SetAttribute("noteTxt", nametbl.notetxt)
-        else
-          rlOoRcontentSlots[i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
-          rlOoRcontentSlots[i].note:SetAttribute("hasNote", false)
-          rlOoRcontentSlots[i].note:SetAttribute("noteTxt", "")
-        end
-        rlOoRcontentSlots[i]:Show()
-      end
-      i = i +1
-      if i > 5 then rlRaiderNotListFrame.text:Hide() else rlRaiderNotListFrame.text:Show() end
-    end
-  --rlRaiderNotListFrame.rlOoRcontent:SetHeight(GUIgrpSlotSizeY * i + 5)
-  rlRaiderNotListFrame.rlOoRscrollbar:SetMinMaxValues(1, (i-1)*((GUIgrpSlotSizeY)/2))
-  --rlRaiderNotListFrame.rlOoRscrollbar:SetValueStep(i)
-  end
-end
-
-local function redrawGroup(grp)
-  if type(grp) == "number" then
-    for n=1, 5 do
-      local slotx = (GUIgrpSlotSizeX * (n -1)) + (5 * n-1)
-      grpMemSlotFrame[grp][n]:ClearAllPoints()
-      grpMemSlotFrame[grp][n]:SetParent(grpMemFrame[grp])
-      grpMemSlotFrame[grp][n]:SetPoint("TOPLEFT", slotx, -3)
-      grpMemSlotFrame[grp][n].texture:SetColorTexture(0.2, 0.2 ,0.2 ,1)
-      grpMemSlotFrame[grp][n].nameText:SetText(L["Empty"])
-      grpMemSlotFrame[grp][n]:SetAttribute("raidid", 0)
-      grpMemSlotFrame[grp][n].nameText:SetTextColor(0.8,0.8,0.8,0.7)
-      grpMemSlotFrame[grp][n].roleTexture:Hide()
-    end
-  else
-    for i=1, 8 do
-      for n=1, 5 do
-      local slotx = (GUIgrpSlotSizeX * (n -1)) + (5 * n-1)
-      grpMemSlotFrame[i][n]:ClearAllPoints()
-      grpMemSlotFrame[i][n]:SetParent(grpMemFrame[i])
-      grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
-      grpMemSlotFrame[i][n].texture:SetColorTexture(0.2, 0.2 ,0.2 ,1)
-      grpMemSlotFrame[i][n].nameText:SetText(L["Empty"])
-      grpMemSlotFrame[i][n]:SetAttribute("raidid", 0)
-      grpMemSlotFrame[i][n].nameText:SetTextColor(0.8,0.8,0.8,0.7)
-      grpMemSlotFrame[i][n].roleTexture:Hide()
-    end
-    end
-  end
-end
-
-local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss - expac depreciated
-  -- First check if the player is in rl db
-  for tname, rldb in pairs(rlProfileDB.profile.raiders) do
-    if tname == name and rldb.raids ~= nil then
-      for tierid, tiers in pairs(rldb.raids) do
-        if tierid == tier then
-          for bossid, bosses in pairs(tiers) do
-            if bossid == boss then
-              if bosses.desireid then return bosses.desireid end
-            end
-          end
-        end
-      end
-    end
-  end
-  return nil
-end
-
-local function raidUpdate(self)
-  -- Only update if frame is visible
-  if not windowframe:IsShown() or not rlTab:IsShown() then
-    return
-  end
-  
-  local i = 1
-  local raidMembers = {}
-  while GetRaidRosterInfo(i) do
-    local name, rank, subgroup, level, class, fileName, zone, online, isDead, role, isML, combatRole = GetRaidRosterInfo(i)
-    if raidMembers[subgroup] == nil then raidMembers[subgroup] = {} end
-    tinsert(raidMembers[subgroup], { name= name, level = level, crole = combatRole, fileName = fileName, raidid = i, isDead = isDead, online = online }) -- level 0 == offline
-    i = i +1
-    if i > 40 then break end
-  end
-  -- Reset all frames
-  redrawGroup()
-  
-  -- Compare raid list to RLDB for Out of Raid window - Is there a better way? Merge the two?
-  local ooRraiders = {}
-  local found = false
-  local n = 1
-  local ooRCount = 0
-  --for rldbName,v in pairs(raidLeaderDB.char.raiders) do -- can convert
-  for rldbName,v in pairs(rlProfileDB.profile.raiders) do -- can convert
-    found = false
-    n = 1
-    while GetRaidRosterInfo(n) do
-      local name = GetRaidRosterInfo(n)
-      if rldbName == name then
-        found = true
-        break
-      end
-      n = n +1
-      if n > 40 then break end
-    end
-    if not found then
-      -- Check desire for boss - expacid depreciated
-      local desireid = hasDesire(rldbName, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
-      local hasNote, noteTxt = hasNote(rldbName, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
-      if desireid or hasNote then
-        ooRraiders[rldbName] = {}
-        if desireid then ooRraiders[rldbName].desireid = desireid end
-        if hasNote then ooRraiders[rldbName].notetxt = noteTxt end
-        ooRCount = ooRCount +1
-      end
-    end
-  end
-  
-  -- Send Out of raid raiders to be drawn
-  if ooRCount > 0 then drawOoR(ooRraiders) end
-  
-  for subgrp,mem in pairs(raidMembers) do -- can convert
-    for k, player in ipairs(mem) do
-      local textColour = RAID_CLASS_COLORS[player.fileName]
-      local desireid = hasDesire(player.name, tonumber(rlSelectedTier.expacid), tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
-      grpMemSlotFrame[subgrp][k]:SetAttribute("raidid", player.raidid) -- We can use this when changing player group
-      grpMemSlotFrame[subgrp][k].texture:SetColorTexture(0, 0 ,0 ,1)
-      grpMemSlotFrame[subgrp][k].nameText:SetText(player.name)
-      if player.online then
-        grpMemSlotFrame[subgrp][k].nameText:SetTextColor(textColour.r, textColour.g, textColour.b)
-      else
-        grpMemSlotFrame[subgrp][k].nameText:SetTextColor(0.8,0.8,0.8,0.7)
-      end
-      grpMemSlotFrame[subgrp][k].roleTexture:SetTexCoord(roleTexCoords[player.crole].left, roleTexCoords[player.crole].right, roleTexCoords[player.crole].top, roleTexCoords[player.crole].bottom)
-      grpMemSlotFrame[subgrp][k].roleTexture:Show()
-      grpMemSlotFrame[subgrp][k].desireTag.text:SetText(desire[desireid] or L["Unknown desire"])
-      
-      local hasNote, noteTxt = hasNote(player.name, tonumber(rlSelectedTier.instid), tostring(rlSelectedTier.bossid))
-      if hasNote then
-        grpMemSlotFrame[subgrp][k].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
-        grpMemSlotFrame[subgrp][k].note:SetAttribute("hasNote", true)
-        grpMemSlotFrame[subgrp][k].note:SetAttribute("noteTxt", noteTxt)
-      else
-        grpMemSlotFrame[subgrp][k].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
-        grpMemSlotFrame[subgrp][k].note:SetAttribute("hasNote", false)
-        grpMemSlotFrame[subgrp][k].note:SetAttribute("noteTxt", "")
-      end
-    end
-  end
-end
-
-function iwtb.setStatusText(f, text)
-  local curTop = rlTab.rlStatusPanel.text:GetText()
-  local function churnContent(statuses)
-    -- insert at top
-    table.insert(statuses, 1, curTop)
-    -- remove bottom
-    if #statuses > 10 then table.remove(statuses) end
-    return statuses
-  end
-  
-  if f == "raider" then
-    raiderTab.raiderStatusPanel.text:SetText(text)
-    raiderTab.raiderStatusPanel.anim:Play()
-  elseif f == "raidleader" then
-    rlTab.rlStatusPanel.text:SetText(text) -- Set top to latest
-    rlTab.rlStatusPanel.anim:Play()
-    rlStatusContent = churnContent(rlStatusContent)
-    for k,v in pairs(rlStatusContent) do -- can convert
-      rlTab.rlStatusPanel.content[k].text:SetText(v)
-    end
-  end
-end
-
-local function removeRaiderData(f, name)
-  --raidLeaderDB.char.raiders[name] = nil
-  wipe(rlProfileDB.profile.raiders[name])
-  iwtb.setStatusText("raidleader", L["Removed data - "] .. name)
-  raidUpdate()
-end
 
 function iwtb.convertDB(dbname)
   if dbname == "raider" then
@@ -783,11 +398,11 @@ local iwtbLDB = LibStub("LibDataBroker-1.1"):NewDataObject("iwtb_icon", {
 		tooltip:AddLine("iWTB - I Want That Boss!");
 	end,
 	OnClick = function() 
-    if windowframe.title:IsShown() then
-      windowframe.title:Hide()
+    if iwtb.windowframe.title:IsShown() then
+      iwtb.windowframe.title:Hide()
     else
-      windowframe.title:Show()
-      raidUpdate()
+      iwtb.windowframe.title:Show()
+      iwtb.raidUpdate()
     end 
   end,})
 local iwtbIcon = LibStub("LibDBIcon-1.0")
@@ -1096,11 +711,11 @@ function iwtb:OnInitialize()
   -- Show the GUI if no input is supplied, otherwise handle the chat input.
   function iwtb:ChatCommand(input)
     if not input or input:trim() == "" then
-      if windowframe.title:IsShown() then
-        windowframe.title:Hide()
+      if iwtb.windowframe.title:IsShown() then
+        iwtb.windowframe.title:Hide()
       else
-        windowframe.title:Show()
-        raidUpdate()
+        iwtb.windowframe.title:Show()
+        iwtb.raidUpdate()
       end
     else
       local cmd, arg = strsplit(" ", input)
@@ -1133,6 +748,7 @@ function iwtb:OnEnable()
   local fontstring
   local button
   local texture
+  local raiderFrames = {}
   
   raidsInfo = buildInstances()
 
@@ -1161,7 +777,7 @@ function iwtb:OnEnable()
     local info = L_UIDropDownMenu_CreateInfo()
     local idofboss = string.match(frame:GetName(), "%d+")
     info.func = bossWantDropDown_OnClick
-    for desireid, name in pairs(desire) do
+    for desireid, name in pairs(iwtb.desire) do
       info.text, info.arg1, info.arg2 = name, desireid, idofboss
       --if raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses ~= nil
       --and raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[idofboss] ~=nil
@@ -1178,7 +794,7 @@ function iwtb:OnEnable()
   end
   
   -- What to do when item is clicked
-  local function raidsDropdownMenuOnClick(self, arg1, arg2, checked)
+function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     if arg2 == "expacbutton" then
       -- fill in raids with arg1 as expac id
       getInstances(arg1)
@@ -1192,7 +808,7 @@ function iwtb:OnEnable()
     elseif arg2 == "expacrlbutton" then
       -- fill in raids with arg1 as expac id
       getInstances(arg1, true)
-      rlSelectedTier.expacid = arg1
+      iwtb.rlSelectedTier.expacid = arg1
       L_UIDropDownMenu_SetText(expacRLButton, expacInfo[arg1])
       
     elseif arg2 == "instancebutton" then
@@ -1227,7 +843,7 @@ function iwtb:OnEnable()
             local creatureTex = creatureFrame:CreateTexture("iwtbcreaturetex" .. idofboss)
             creatureTex:SetPoint("TOPLEFT", 60, 13)
             creatureTex:SetTexture(bossImage)
-            local texture = bossFrame[idofboss]:CreateTexture("iwtbboss" .. idofboss)
+            texture = bossFrame[idofboss]:CreateTexture("iwtbboss" .. idofboss)
             texture:SetAllPoints(bossFrame[idofboss])
             texture:SetColorTexture(0.2,0.2,0.8,0.7)
             
@@ -1238,7 +854,7 @@ function iwtb:OnEnable()
             bossFrame[idofboss].fontFrame:SetWidth(100)
             bossFrame[idofboss].fontFrame:SetPoint("TOPLEFT", 100, 0)
              
-            local fontstring = bossFrame[idofboss].fontFrame:CreateFontString("iwtbbosstext" .. idofboss)
+            fontstring = bossFrame[idofboss].fontFrame:CreateFontString("iwtbbosstext" .. idofboss)
             fontstring:SetAllPoints(bossFrame[idofboss].fontFrame)
             fontstring:SetFontObject("Game12Font")
             fontstring:SetJustifyH("LEFT")
@@ -1289,7 +905,7 @@ function iwtb:OnEnable()
             if raiderDB.char.raids[raiderSelectedTier.instid]
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss]
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note
-            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note ~= "" then
+            and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note ~= "" then -- TODO: use schema check instead
               bossHasNote = true
               bossFrame[idofboss].addNote:SetText(L["Edit note"])
             else
@@ -1350,7 +966,7 @@ function iwtb:OnEnable()
             if raiderDB.char.raids[raiderSelectedTier.instid] ~= nil
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss] ~= nil
             and raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid then
-              L_UIDropDownMenu_SetText(bossWantdropdown, desire[raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid])
+              L_UIDropDownMenu_SetText(bossWantdropdown, iwtb.desire[raiderDB.char.raids[raiderSelectedTier.instid][idofboss].desireid])
             else
               L_UIDropDownMenu_SetText(bossWantdropdown, L["Select desirability"])
             end
@@ -1408,13 +1024,13 @@ function iwtb:OnEnable()
       
     elseif arg2 == "instancerlbutton" then
       L_UIDropDownMenu_SetText(instanceRLButton, tierRLRaidInstances.raids[arg1])
-      rlSelectedTier.instid = arg1
+      iwtb.rlSelectedTier.instid = arg1
       getBosses(arg1, true)
     
     elseif arg2 == "bossesrlbutton" then -- only in RL tab
       L_UIDropDownMenu_SetText(bossesRLButton, self:GetText())
-      rlSelectedTier.bossid = arg1
-      raidUpdate()
+      iwtb.rlSelectedTier.bossid = arg1
+      iwtb.raidUpdate()
     end
   end
   
@@ -1424,7 +1040,7 @@ function iwtb:OnEnable()
     if frame:GetName() == "expacbutton" then
       -- Get expansions
       if expacInfo == nil then getExpansions() end
-      info.func = raidsDropdownMenuOnClick
+      info.func = iwtb.raidsDropdownMenuOnClick
       for key, value in pairs(expacInfo) do -- can convert
         info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
         L_UIDropDownMenu_AddButton(info)
@@ -1433,7 +1049,7 @@ function iwtb:OnEnable()
     elseif frame:GetName() == "expacrlbutton" then
       -- Get expansions
       if expacInfo == nil then getExpansions() end
-      info.func = raidsDropdownMenuOnClick
+      info.func = iwtb.raidsDropdownMenuOnClick
       for key, value in pairs(expacInfo) do -- can convert
         info.text, info.notCheckable, info.arg1, info.arg2 = value, true, key, frame:GetName()
         L_UIDropDownMenu_AddButton(info)
@@ -1442,7 +1058,7 @@ function iwtb:OnEnable()
     elseif frame:GetName() == "instancebutton" then
       -- Get raids for expac
       if tierRaidInstances ~= nil then
-        info.func = raidsDropdownMenuOnClick
+        info.func = iwtb.raidsDropdownMenuOnClick
         for key, value in pairs(tierRaidInstances.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
           info.text, info.notCheckable, info.arg1, info.arg2 = tierRaidInstances.raids[value], true, value, frame:GetName()
           L_UIDropDownMenu_AddButton(info)
@@ -1452,7 +1068,7 @@ function iwtb:OnEnable()
     elseif frame:GetName() == "instancerlbutton" then
       -- Get raids for expac
       if tierRLRaidInstances ~= nil then
-        info.func = raidsDropdownMenuOnClick
+        info.func = iwtb.raidsDropdownMenuOnClick
         for key, value in pairs(tierRLRaidInstances.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
           info.text, info.notCheckable, info.arg1, info.arg2 = tierRLRaidInstances.raids[value], true, value, frame:GetName()
           L_UIDropDownMenu_AddButton(info)
@@ -1461,10 +1077,10 @@ function iwtb:OnEnable()
       
     elseif frame:GetName() == "bossesrlbutton" then
       -- Get bosses for instance - RL only
-      if instanceBosses ~= nil then
-        info.func = raidsDropdownMenuOnClick
-        for key, value in pairs(instanceBosses.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
-          info.text, info.notCheckable, info.arg1, info.arg2 = instanceBosses.bosses[value], true, value, frame:GetName()
+      if iwtb.instanceBosses ~= nil then
+        info.func = iwtb.raidsDropdownMenuOnClick
+        for key, value in pairs(iwtb.instanceBosses.order) do -- Use .order as .raids is sorted by instanceid which is not in the correct order.
+          info.text, info.notCheckable, info.arg1, info.arg2 = iwtb.instanceBosses.bosses[value], true, value, frame:GetName()
           L_UIDropDownMenu_AddButton(info)
         end
       end
@@ -1480,7 +1096,7 @@ function iwtb:OnEnable()
     -- Set dropdown text to new selection
     if arg1 > 0 then
       --L_UIDropDownMenu_SetSelectedID(bossKillPopup.desireDrop, arg1) -- For "reasons" this sometimes doesn't work so SetText used instead.
-      L_UIDropDownMenu_SetText(bossKillPopup.desireDrop, desire[arg1])
+      L_UIDropDownMenu_SetText(bossKillPopup.desireDrop, iwtb.desire[arg1])
     else
       L_UIDropDownMenu_SetText(bossKillPopup.desireDrop, L["Select desirability"])
     end
@@ -1491,7 +1107,7 @@ function iwtb:OnEnable()
   local function bossKillWantDropDown_Menu(frame, level, menuList)
     local info = L_UIDropDownMenu_CreateInfo()
     info.func = bossKillWantDropDown_OnClick
-    for desireid, name in pairs(desire) do
+    for desireid, name in pairs(iwtb.desire) do
       info.text, info.arg1, info.arg2 = name, desireid, bossKillPopupSelectedBossId
       if tonumber(bossKillInfo.bossid) > 0
       --and raiderDB.char.expac[bossKillInfo.expacid].tier[bossKillInfo.instid].bosses ~= nil
@@ -1613,7 +1229,7 @@ function iwtb:OnEnable()
   title:SetScript("OnDragStop", function(s) s:StopMovingOrSizing();end)
   title:SetScript("OnHide", function(s) s:StopMovingOrSizing() end)
   title:SetScript("OnDoubleClick", function(s)
-    if windowframe:IsShown() then windowframe:Hide() else windowframe:Show() end
+    if iwtb.windowframe:IsShown() then iwtb.windowframe:Hide() else iwtb.windowframe:Show() end
   end)
   texture = title:CreateTexture("iwtbtitletex")
   texture:SetAllPoints(title)
@@ -1632,7 +1248,7 @@ function iwtb:OnEnable()
   button:Enable()
   button:RegisterForClicks("LeftButtonUp")
   button:SetScript("OnClick", function(s)
-    windowframe.title:Hide()
+    iwtb.windowframe.title:Hide()
   end)
   button:SetScript("OnEnter", function(s) s.texture:SetGradientAlpha("VERTICAL", 1, 1, 1, 0.5, 1, 1, 1, 1) end)
   button:SetScript("OnLeave", function(s) s.texture:SetGradientAlpha("VERTICAL", 1, 1, 1, 0.5, 1, 1, 1, .7) end)
@@ -1649,29 +1265,29 @@ function iwtb:OnEnable()
   -- Hide on esc
   tinsert(UISpecialFrames,"iwtbtitle")
   
-  windowframe = CreateFrame("Frame", "iwtbwindow", title)
-  windowframe:SetWidth(GUIwindowSizeX)
-  windowframe:SetHeight(GUIwindowSizeY)
-  windowframe:SetPoint("TOP", 0, -20)
-  windowframe:SetFrameStrata("DIALOG")
-  windowframe:SetMovable(true)
-  windowframe:EnableMouse(true)
+  iwtb.windowframe = CreateFrame("Frame", "iwtbwindow", title)
+  iwtb.windowframe:SetWidth(GUIwindowSizeX)
+  iwtb.windowframe:SetHeight(GUIwindowSizeY)
+  iwtb.windowframe:SetPoint("TOP", 0, -20)
+  iwtb.windowframe:SetFrameStrata("DIALOG")
+  iwtb.windowframe:SetMovable(true)
+  iwtb.windowframe:EnableMouse(true)
   
-  fontstring = windowframe:CreateFontString("iwtbtitletext")
+  fontstring = iwtb.windowframe:CreateFontString("iwtbtitletext")
   fontstring:SetPoint("BOTTOMRIGHT", -10, 1)
   fontstring:SetTextColor(0.8,0.8,0.8,0.7)
   fontstring:SetFontObject("SystemFont_NamePlate")
   fontstring:SetText(L["Version: "] .. GetAddOnMetadata("iwtb", "version"))
   
-  windowframe.title = title
+  iwtb.windowframe.title = title
 
-  texture = windowframe:CreateTexture("iwtbframetexture")
+  texture = iwtb.windowframe:CreateTexture("iwtbframetexture")
   texture:SetAllPoints(texture:GetParent())
   texture:SetColorTexture(0,0,0,0.5)
-  windowframe.texture = texture
+  iwtb.windowframe.texture = texture
   
   -- Tutorial frame
-  local tutorialFrame = CreateFrame("Frame", "iwtbtutorialframe", windowframe)
+  local tutorialFrame = CreateFrame("Frame", "iwtbtutorialframe", iwtb.windowframe)
   tutorialFrame:SetWidth(GUItabWindowSizeX-30)
   tutorialFrame:SetHeight(GUItabWindowSizeY-30)
   tutorialFrame:SetFrameStrata("FULLSCREEN")
@@ -1734,41 +1350,41 @@ function iwtb:OnEnable()
   ----------
   
   -- Raider tab
-  raiderTab = CreateFrame("Frame", "iwtbraidertab", windowframe)
-  raiderTab:SetWidth(GUItabWindowSizeX)
-  raiderTab:SetHeight(GUItabWindowSizeY)
-  raiderTab:SetPoint("CENTER", 0, -20)
-  texture = raiderTab:CreateTexture("iwtbraidertex")
-  texture:SetAllPoints(raiderTab)
+  iwtb.raiderTab = CreateFrame("Frame", "iwtbiwtb.raiderTab", iwtb.windowframe)
+  iwtb.raiderTab:SetWidth(GUItabWindowSizeX)
+  iwtb.raiderTab:SetHeight(GUItabWindowSizeY)
+  iwtb.raiderTab:SetPoint("CENTER", 0, -20)
+  texture = iwtb.raiderTab:CreateTexture("iwtbraidertex")
+  texture:SetAllPoints(iwtb.raiderTab)
   texture:SetColorTexture(0,0,0,1)
   
   -- Raider status text panel
-  local raiderStatusPanel = CreateFrame("Frame", "iwtbraiderstatuspanel", raiderTab)
-  raiderStatusPanel:SetWidth(GUIRStatusSizeX)
-  raiderStatusPanel:SetHeight(GUIRStatusSizeY)
-  raiderStatusPanel:SetPoint("TOPRIGHT", -50, 20)
-  texture = raiderStatusPanel:CreateTexture("iwtbrstatusptex")
-  texture:SetAllPoints(raiderStatusPanel)
+  raiderFrames.raiderStatusPanel = CreateFrame("Frame", "iwtbraiderstatuspanel", iwtb.raiderTab)
+  raiderFrames.raiderStatusPanel:SetWidth(GUIRStatusSizeX)
+  raiderFrames.raiderStatusPanel:SetHeight(GUIRStatusSizeY)
+  raiderFrames.raiderStatusPanel:SetPoint("TOPRIGHT", -50, 20)
+  texture = raiderFrames.raiderStatusPanel:CreateTexture("iwtbrstatusptex")
+  texture:SetAllPoints(raiderFrames.raiderStatusPanel)
   texture:SetColorTexture(0.2,0,0,1)
-  fontstring = raiderStatusPanel:CreateFontString("iwtbrstatusptext")
-  fontstring:SetAllPoints(raiderStatusPanel)
+  fontstring = raiderFrames.raiderStatusPanel:CreateFontString("iwtbrstatusptext")
+  fontstring:SetAllPoints(raiderFrames.raiderStatusPanel)
   fontstring:SetFontObject("SpellFont_Small")
   fontstring:SetJustifyH("CENTER")
   fontstring:SetJustifyV("CENTER")
-  raiderStatusPanel.text = fontstring
+  raiderFrames.raiderStatusPanel.text = fontstring
   
-  local rStatusAnim = fontstring:CreateAnimationGroup()
-  local rStatusAnim1 = rStatusAnim:CreateAnimation("Alpha")
-  rStatusAnim1:SetFromAlpha(0)
-  rStatusAnim1:SetToAlpha(1)
-  rStatusAnim1:SetDuration(1.5)
-  rStatusAnim1:SetSmoothing("OUT")
-  raiderStatusPanel.anim = rStatusAnim
+  raiderFrames.rStatusAnim = fontstring:CreateAnimationGroup()
+  raiderFrames.rStatusAnim1 = raiderFrames.rStatusAnim:CreateAnimation("Alpha")
+  raiderFrames.rStatusAnim1:SetFromAlpha(0)
+  raiderFrames.rStatusAnim1:SetToAlpha(1)
+  raiderFrames.rStatusAnim1:SetDuration(1.5)
+  raiderFrames.rStatusAnim1:SetSmoothing("OUT")
+  raiderFrames.raiderStatusPanel.anim = raiderFrames.rStatusAnim
   
-  raiderTab.raiderStatusPanel = raiderStatusPanel
+  iwtb.raiderTab.raiderStatusPanel = raiderFrames.raiderStatusPanel
   
   -- made local at start because dropdown menu function uses it
-  raiderBossListFrame = CreateFrame("Frame", "iwtbraiderbosslist", raiderTab)
+  raiderBossListFrame = CreateFrame("Frame", "iwtbraiderbosslist", iwtb.raiderTab)
   raiderBossListFrame:SetWidth(GUItabWindowSizeX -20)
   raiderBossListFrame:SetHeight(GUItabWindowSizeY -20)
   raiderBossListFrame:SetPoint("CENTER", 0, 0)
@@ -1777,15 +1393,15 @@ function iwtb:OnEnable()
   texture:SetColorTexture(0.1,0.1,0.1,0.5)
   
   -- Raider send button
-  local raiderSendButton = CreateFrame("Button", "iwtbraidersendbutton", raiderTab, "UIPanelGoldButtonTemplate")
-  raiderSendButton:SetWidth(GUItabButtonSizeX+20)
-  raiderSendButton:SetHeight(GUItabButtonSizeY+1)
-  raiderSendButton:SetText(L["Send"])
-  raiderSendButton:SetFrameLevel(5)
-  raiderSendButton:SetPoint("BOTTOMRIGHT", -20, 27)
-  raiderSendButton:Enable()
-  raiderSendButton:RegisterForClicks("LeftButtonUp")
-  raiderSendButton:SetScript("OnClick", function(s)
+  raiderFrames.raiderSendButton = CreateFrame("Button", "iwtbraiderSendButton", iwtb.raiderTab, "UIPanelGoldButtonTemplate")
+  raiderFrames.raiderSendButton:SetWidth(GUItabButtonSizeX+20)
+  raiderFrames.raiderSendButton:SetHeight(GUItabButtonSizeY+1)
+  raiderFrames.raiderSendButton:SetText(L["Send"])
+  raiderFrames.raiderSendButton:SetFrameLevel(5)
+  raiderFrames.raiderSendButton:SetPoint("BOTTOMRIGHT", -20, 27)
+  raiderFrames.raiderSendButton:Enable()
+  raiderFrames.raiderSendButton:RegisterForClicks("LeftButtonUp")
+  raiderFrames.raiderSendButton:SetScript("OnClick", function(s)
     function iwtb:coolDownSend()
       s:Enable()
     end
@@ -1802,7 +1418,7 @@ function iwtb:OnEnable()
   end)
   
   -- Raider test button
-  local raiderTestButton = CreateFrame("Button", "iwtbraidertestbutton", raiderTab, "UIMenuButtonStretchTemplate")
+  local raiderTestButton = CreateFrame("Button", "iwtbraidertestbutton", iwtb.raiderTab, "UIMenuButtonStretchTemplate")
   raiderTestButton:SetWidth(GUItabButtonSizeX)
   --raiderTestButton:SetWidth(42)
   raiderTestButton:SetHeight(GUItabButtonSizeY)
@@ -1836,22 +1452,22 @@ function iwtb:OnEnable()
   raiderTestButton:Hide()
   
   -- Raider close button
-  local raiderCloseButton = CreateFrame("Button", "iwtbraiderclosebutton", raiderTab, "UIPanelButtonTemplate")
-  raiderCloseButton:SetWidth(GUItabButtonSizeX)
-  raiderCloseButton:SetHeight(GUItabButtonSizeY)
-  raiderCloseButton:SetText(L["Close"])
-  raiderCloseButton:SetFrameLevel(5)
-  raiderCloseButton:SetPoint("BOTTOMLEFT", 20, 30)
-  texture = raiderCloseButton:CreateTexture("raiderclosebuttex")
-  texture:SetAllPoints(raiderCloseButton)
-  raiderCloseButton:Enable()
-  raiderCloseButton:RegisterForClicks("LeftButtonUp")
-  raiderCloseButton:SetScript("OnClick", function(s)
-    windowframe.title:Hide()
+  raiderFrames.raiderCloseButton = CreateFrame("Button", "iwtbraiderCloseButton", iwtb.raiderTab, "UIPanelButtonTemplate")
+  raiderFrames.raiderCloseButton:SetWidth(GUItabButtonSizeX)
+  raiderFrames.raiderCloseButton:SetHeight(GUItabButtonSizeY)
+  raiderFrames.raiderCloseButton:SetText(L["Close"])
+  raiderFrames.raiderCloseButton:SetFrameLevel(5)
+  raiderFrames.raiderCloseButton:SetPoint("BOTTOMLEFT", 20, 30)
+  texture = raiderFrames.raiderCloseButton:CreateTexture("raiderclosebuttex")
+  texture:SetAllPoints(raiderFrames.raiderCloseButton)
+  raiderFrames.raiderCloseButton:Enable()
+  raiderFrames.raiderCloseButton:RegisterForClicks("LeftButtonUp")
+  raiderFrames.raiderCloseButton:SetScript("OnClick", function(s)
+    iwtb.windowframe.title:Hide()
   end)
   
   -- Raider tutorial button
-  local raiderTutorialButton = CreateFrame("Button", "iwtbraidertutorialbutton", raiderTab, "UIPanelButtonTemplate")
+  local raiderTutorialButton = CreateFrame("Button", "iwtbraidertutorialbutton", iwtb.raiderTab, "UIPanelButtonTemplate")
   raiderTutorialButton:SetWidth(GUItabButtonSizeX)
   raiderTutorialButton:SetHeight(GUItabButtonSizeY)
   raiderTutorialButton:SetText(L["Tutorial"])
@@ -1879,7 +1495,7 @@ function iwtb:OnEnable()
     preferredIndex = 3,  -- avoid some UI taint, see http://www.wowace.com/announcements/how-to-avoid-some-ui-taint/
   }
   
-  local raiderResetDBButton = CreateFrame("Button", "iwtbraiderresetdbbutton", raiderTab, "UIPanelButtonTemplate")
+  local raiderResetDBButton = CreateFrame("Button", "iwtbraiderresetdbbutton", iwtb.raiderTab, "UIPanelButtonTemplate")
   raiderResetDBButton:SetWidth(GUItabButtonSizeX)
   raiderResetDBButton:SetHeight(GUItabButtonSizeY)
   raiderResetDBButton:SetText(L["Reset DB"])
@@ -1896,24 +1512,24 @@ function iwtb:OnEnable()
   --------------------
   -- Raider leader tab
   --------------------
-  rlTab = CreateFrame("Frame", "iwtbraidleadertab", windowframe)
-  rlTab:SetWidth(GUItabWindowSizeX)
-  rlTab:SetHeight(GUItabWindowSizeY)
-  rlTab:SetPoint("CENTER", 0, -20)
-  texture = rlTab:CreateTexture("iwtbraidleadertex")
-  texture:SetAllPoints(rlTab)
+  iwtb.rlTab = CreateFrame("Frame", "iwtbraidleadertab", iwtb.windowframe)
+  iwtb.rlTab:SetWidth(GUItabWindowSizeX)
+  iwtb.rlTab:SetHeight(GUItabWindowSizeY)
+  iwtb.rlTab:SetPoint("CENTER", 0, -20)
+  texture = iwtb.rlTab:CreateTexture("iwtbraidleadertex")
+  texture:SetAllPoints(iwtb.rlTab)
   texture:SetColorTexture(0,0,0,1)
   
   ---------------------------
   -- Raid leader status text panel
   ---------------------------
-  local rlStatusPanel = CreateFrame("Frame", "iwtbrlstatuspanel", rlTab)
+  local rlStatusPanel = CreateFrame("Frame", "iwtbrlstatuspanel", iwtb.rlTab)
   rlStatusPanel:SetWidth(GUIRStatusSizeX)
   rlStatusPanel:SetHeight(GUIRStatusSizeY)
   rlStatusPanel:SetPoint("TOPRIGHT", -50, 20)
   
-  rlStatusPanel:SetScript("OnEnter", function(s) for i=1, #rlTab.rlStatusPanel.content do local v = rlTab.rlStatusPanel.content[i] v:Show() end end)
-  rlStatusPanel:SetScript("OnLeave", function(s) for i=1, #rlTab.rlStatusPanel.content do local v = rlTab.rlStatusPanel.content[i] v:Hide() end end)
+  rlStatusPanel:SetScript("OnEnter", function(s) for i=1, #iwtb.rlTab.rlStatusPanel.content do local v = iwtb.rlTab.rlStatusPanel.content[i] v:Show() end end)
+  rlStatusPanel:SetScript("OnLeave", function(s) for i=1, #iwtb.rlTab.rlStatusPanel.content do local v = iwtb.rlTab.rlStatusPanel.content[i] v:Hide() end end)
     
   texture = rlStatusPanel:CreateTexture("iwtbrlstatusptex")
   texture:SetAllPoints(rlStatusPanel)
@@ -1932,7 +1548,7 @@ function iwtb:OnEnable()
   rlStatusAnim1:SetSmoothing("OUT")
   rlStatusPanel.anim = rlStatusAnim
   
-  rlTab.rlStatusPanel = rlStatusPanel
+  iwtb.rlTab.rlStatusPanel = rlStatusPanel
   
   -- Create 10 status lines
   local rlStatusPanelContent = {}
@@ -1952,7 +1568,7 @@ function iwtb:OnEnable()
     rlStatusPanelContent[i].text = fontstring
     rlStatusPanelContent[i]:Hide()
   end
-  rlTab.rlStatusPanel.content = rlStatusPanelContent
+  iwtb.rlTab.rlStatusPanel.content = rlStatusPanelContent
   
   -- Raid Leader reset DB button
   StaticPopupDialogs["IWTB_ResetRaidLeaderDB"] = {
@@ -1970,7 +1586,7 @@ function iwtb:OnEnable()
   }
 
   -- rlRaiderListFrame
-  rlRaiderListFrame = CreateFrame("Frame", "iwtbrlraiderlistframe", rlTab)
+  rlRaiderListFrame = CreateFrame("Frame", "iwtbrlraiderlistframe", iwtb.rlTab)
   rlRaiderListFrame:SetWidth(GUItabWindowSizeX -20)
   rlRaiderListFrame:SetHeight(GUItabWindowSizeY -20)
   rlRaiderListFrame:SetPoint("CENTER", 0, 0)
@@ -1978,145 +1594,155 @@ function iwtb:OnEnable()
   texture:SetAllPoints(rlRaiderListFrame)
   texture:SetColorTexture(0.1,0.1,0.1,0.5)
   
+  -- iwtb.rlRaiderOverviewFrame
+  iwtb.rlRaiderOverviewFrame = CreateFrame("Frame", "iwtbrlraideroverviewframe", iwtb.rlTab)
+  iwtb.rlRaiderOverviewFrame:SetWidth(GUItabWindowSizeX -20)
+  iwtb.rlRaiderOverviewFrame:SetHeight(GUItabWindowSizeY -20)
+  iwtb.rlRaiderOverviewFrame:SetPoint("CENTER", 0, 0)
+  texture = iwtb.rlRaiderOverviewFrame:CreateTexture("iwtbrlraideroverviewframetex")
+  texture:SetAllPoints(iwtb.rlRaiderOverviewFrame)
+  texture:SetColorTexture(0.1,0.1,0.1,0.5)
+  iwtb.rlRaiderOverviewFrame:Hide()
+  
   -- Create frame for each raid spot
   for i=1, 8 do -- 8 groups of 5 slots
     local x = 20
     local y = (GUIgrpSizeY + 5) * i
     
-    grpMemFrame[i] = CreateFrame("Frame", "iwtbgrp" .. i, rlRaiderListFrame)
-    grpMemFrame[i]:SetWidth(GUIgrpSizeX)
-    grpMemFrame[i]:SetHeight(GUIgrpSizeY)
-    grpMemFrame[i]:SetPoint("TOPLEFT",x, -y)
-    local texture = grpMemFrame[i]:CreateTexture("iwtbgrptex" .. i)
+    iwtb.grpMemFrame[i] = CreateFrame("Frame", "iwtbgrp" .. i, rlRaiderListFrame)
+    iwtb.grpMemFrame[i]:SetWidth(GUIgrpSizeX)
+    iwtb.grpMemFrame[i]:SetHeight(GUIgrpSizeY)
+    iwtb.grpMemFrame[i]:SetPoint("TOPLEFT",x, -y)
+    local texture = iwtb.grpMemFrame[i]:CreateTexture("iwtbgrptex" .. i)
     texture:SetAllPoints(texture:GetParent())
     if i < 5 then
       texture:SetColorTexture(0,0.7,0,0.7)
     else
       texture:SetColorTexture(0.5,0.5,0.5,0.7)
     end
-    grpMemSlotFrame[i] = {}
+    iwtb.grpMemSlotFrame[i] = {}
     
     for n=1, 5 do -- 5 frames/slots per group
-      local slotx = (GUIgrpSlotSizeX * (n -1)) + (5 * n-1)
-      grpMemSlotFrame[i][n] = CreateFrame("Button", "iwtbgrpslot" .. i .. "-" .. n, grpMemFrame[i])
-      grpMemSlotFrame[i][n]:SetWidth(GUIgrpSlotSizeX)
-      grpMemSlotFrame[i][n]:SetHeight(GUIgrpSlotSizeY)
-      grpMemSlotFrame[i][n]:ClearAllPoints()
-      grpMemSlotFrame[i][n]:SetAttribute("raidid", 0)
-      grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
+      local slotx = (iwtb.GUIgrpSlotSizeX * (n -1)) + (5 * n-1)
+      iwtb.grpMemSlotFrame[i][n] = CreateFrame("Button", "iwtbgrpslot" .. i .. "-" .. n, iwtb.grpMemFrame[i])
+      iwtb.grpMemSlotFrame[i][n]:SetWidth(iwtb.GUIgrpSlotSizeX)
+      iwtb.grpMemSlotFrame[i][n]:SetHeight(iwtb.GUIgrpSlotSizeY)
+      iwtb.grpMemSlotFrame[i][n]:ClearAllPoints()
+      iwtb.grpMemSlotFrame[i][n]:SetAttribute("raidid", 0)
+      iwtb.grpMemSlotFrame[i][n]:SetPoint("TOPLEFT", slotx, -3)
       
-      local texture = grpMemSlotFrame[i][n]:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
-      local fontstring = grpMemSlotFrame[i][n]:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
+      local texture = iwtb.grpMemSlotFrame[i][n]:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
+      local fontstring = iwtb.grpMemSlotFrame[i][n]:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
       texture:SetAllPoints(texture:GetParent())
       texture:SetColorTexture(0.2, 0.2 ,0.2 ,1)
-      grpMemSlotFrame[i][n].texture = texture
+      iwtb.grpMemSlotFrame[i][n].texture = texture
       fontstring:SetPoint("CENTER", 0, 6)
-      fontstring:SetWidth(GUIgrpSlotSizeX - 25)
+      fontstring:SetWidth(iwtb.GUIgrpSlotSizeX - 25)
       fontstring:SetJustifyH("CENTER")
       fontstring:SetJustifyV("CENTER")
       fontstring:SetFontObject("Game12Font")
       fontstring:SetText(L["Empty"])
-      grpMemSlotFrame[i][n].nameText = fontstring
+      iwtb.grpMemSlotFrame[i][n].nameText = fontstring
       
-      grpMemSlotFrame[i][n]:RegisterForDrag("LeftButton");
-      grpMemSlotFrame[i][n]:RegisterForClicks("RightButtonUp");
-      grpMemSlotFrame[i][n]:SetMovable(true);
-      grpMemSlotFrame[i][n]:EnableMouse(true);
-      grpMemSlotFrame[i][n]:SetScript("OnDragStart", function(s, ...) s:StartMoving() s:SetFrameStrata("TOOLTIP") end);
-      grpMemSlotFrame[i][n]:SetScript("OnDragStop", function(s, ...)
+      iwtb.grpMemSlotFrame[i][n]:RegisterForDrag("LeftButton");
+      iwtb.grpMemSlotFrame[i][n]:RegisterForClicks("RightButtonUp");
+      iwtb.grpMemSlotFrame[i][n]:SetMovable(true);
+      iwtb.grpMemSlotFrame[i][n]:EnableMouse(true);
+      iwtb.grpMemSlotFrame[i][n]:SetScript("OnDragStart", function(s, ...) s:StartMoving() s:SetFrameStrata("TOOLTIP") end);
+      iwtb.grpMemSlotFrame[i][n]:SetScript("OnDragStop", function(s, ...)
         s:StopMovingOrSizing()
         s:SetFrameStrata("FULLSCREEN")
         
         if not IsInRaid() then
           iwtb.setStatusText("raidleader", L["Need to be in a raid group"])
-          raidUpdate()
+          iwtb.raidUpdate()
           return
         end
         
         local sourceGroup = tonumber(string.sub(s:GetName(), -3, -3))
-        local mousex, mousey = GetCursorPosition();
-        local scale = UIParent:GetEffectiveScale();
-        mousex = mousex / scale;
-        mousey = mousey / scale;
-        local targetgroup, targetmember = MemberFrameContainsPoint(mousex, mousey);
+        local mousex, mousey = GetCursorPosition()
+        local scale = UIParent:GetEffectiveScale()
+        mousex = mousex / scale
+        mousey = mousey / scale
+        local targetgroup, targetmember = iwtb.MemberFrameContainsPoint(mousex, mousey)
         if targetgroup then
           if targetmember then
-            if grpHasEmpty(targetgroup) then
+            if iwtb.grpHasEmpty(targetgroup) then
               -- Move to targetgroup
               SetRaidSubgroup(s:GetAttribute("raidid"), targetgroup)
             else
               -- Swap with targetmember
-              SwapRaidSubgroup(s:GetAttribute("raidid"), grpMemSlotFrame[targetgroup][targetmember]:GetAttribute("raidid"))
+              SwapRaidSubgroup(s:GetAttribute("raidid"), iwtb.grpMemSlotFrame[targetgroup][targetmember]:GetAttribute("raidid"))
             end
           end
           
           -- Redraw group frames
           if targetgroup ~= sourceGroup then
-            raidUpdate()
+            iwtb.raidUpdate()
           end
         end
         -- Redraw source group in case button is left outside our frames
-        raidUpdate()
+        iwtb.raidUpdate()
       end)
 
       -- Context menu
-      grpMemSlotFrame[i][n].dropdown = CreateFrame("Frame", "iwtbslotcmenu" .. i .. "-" .. n , grpMemSlotFrame[i][n], "L_UIDropDownMenuTemplate")
-      grpMemSlotFrame[i][n]:SetScript("OnClick", function(s) L_ToggleDropDownMenu(1, nil, s.dropdown, "cursor", -25, -10) end)
-      L_UIDropDownMenu_Initialize(grpMemSlotFrame[i][n].dropdown, slotDropDown_Menu)
+      iwtb.grpMemSlotFrame[i][n].dropdown = CreateFrame("Frame", "iwtbslotcmenu" .. i .. "-" .. n , iwtb.grpMemSlotFrame[i][n], "L_UIDropDownMenuTemplate")
+      iwtb.grpMemSlotFrame[i][n]:SetScript("OnClick", function(s) L_ToggleDropDownMenu(1, nil, s.dropdown, "cursor", -25, -10) end)
+      L_UIDropDownMenu_Initialize(iwtb.grpMemSlotFrame[i][n].dropdown, iwtb.slotDropDown_Menu)
 
       -- role texture
-      texture = grpMemSlotFrame[i][n]:CreateTexture()
+      texture = iwtb.grpMemSlotFrame[i][n]:CreateTexture()
       texture:SetPoint("LEFT", -4, 17)
       texture:SetHeight(16)
       texture:SetWidth(16)
       texture:SetTexture("Interface\\LFGFRAME\\UI-LFG-ICON-PORTRAITROLES.tga")
       texture:SetDrawLayer("OVERLAY", 7)
-      grpMemSlotFrame[i][n].roleTexture = texture
-      grpMemSlotFrame[i][n].roleTexture:Hide()
+      iwtb.grpMemSlotFrame[i][n].roleTexture = texture
+      iwtb.grpMemSlotFrame[i][n].roleTexture:Hide()
       
       -- desire label
-      grpMemSlotFrame[i][n].desireTag = CreateFrame("Frame", "iwtbgrpslotdesire" .. i .. "-" .. n, grpMemSlotFrame[i][n])
-      grpMemSlotFrame[i][n].desireTag:SetWidth(GUIgrpSlotSizeX - 4)
-      grpMemSlotFrame[i][n].desireTag:SetHeight((GUIgrpSlotSizeY /2) - 6)
-      grpMemSlotFrame[i][n].desireTag:ClearAllPoints()
-      grpMemSlotFrame[i][n].desireTag:SetPoint("BOTTOM", 0, 0)
+      iwtb.grpMemSlotFrame[i][n].desireTag = CreateFrame("Frame", "iwtbgrpslotdesire" .. i .. "-" .. n, iwtb.grpMemSlotFrame[i][n])
+      iwtb.grpMemSlotFrame[i][n].desireTag:SetWidth(iwtb.GUIgrpSlotSizeX - 4)
+      iwtb.grpMemSlotFrame[i][n].desireTag:SetHeight((iwtb.GUIgrpSlotSizeY /2) - 6)
+      iwtb.grpMemSlotFrame[i][n].desireTag:ClearAllPoints()
+      iwtb.grpMemSlotFrame[i][n].desireTag:SetPoint("BOTTOM", 0, 0)
       
-      local texture = grpMemSlotFrame[i][n].desireTag:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
-      grpMemSlotFrame[i][n].desireTag.text = grpMemSlotFrame[i][n].desireTag:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
+      local texture = iwtb.grpMemSlotFrame[i][n].desireTag:CreateTexture("iwtbgrpslottex" .. i .. "-" .. n)
+      iwtb.grpMemSlotFrame[i][n].desireTag.text = iwtb.grpMemSlotFrame[i][n].desireTag:CreateFontString("iwtbgrpslotfont" .. i .. "-" .. n)
       texture:SetAllPoints(texture:GetParent())
       texture:SetColorTexture(0,0,0.2,1)
-      grpMemSlotFrame[i][n].desireTag.text:SetPoint("CENTER")
-      grpMemSlotFrame[i][n].desireTag.text:SetJustifyH("CENTER")
-      grpMemSlotFrame[i][n].desireTag.text:SetJustifyV("BOTTOM")
-      --grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
-      grpMemSlotFrame[i][n].desireTag.text:SetFontObject("SpellFont_Small")
-      grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
+      iwtb.grpMemSlotFrame[i][n].desireTag.text:SetPoint("CENTER")
+      iwtb.grpMemSlotFrame[i][n].desireTag.text:SetJustifyH("CENTER")
+      iwtb.grpMemSlotFrame[i][n].desireTag.text:SetJustifyV("BOTTOM")
+      --iwtb.grpMemSlotFrame[i][n].desireTag.text:SetFont(GUIfont, 10, "")
+      iwtb.grpMemSlotFrame[i][n].desireTag.text:SetFontObject("SpellFont_Small")
+      iwtb.grpMemSlotFrame[i][n].desireTag.text:SetText(L["Unknown desire"])
       
       -- note
-      grpMemSlotFrame[i][n].note = CreateFrame("Frame", "iwtbgrpslotnote" .. n, grpMemSlotFrame[i][n].desireTag)
-      grpMemSlotFrame[i][n].note:SetWidth(16)
-      grpMemSlotFrame[i][n].note:SetHeight(16)
-      grpMemSlotFrame[i][n].note:ClearAllPoints()
-      grpMemSlotFrame[i][n].note:SetPoint("BOTTOMRIGHT", 3, 0)
+      iwtb.grpMemSlotFrame[i][n].note = CreateFrame("Frame", "iwtbgrpslotnote" .. n, iwtb.grpMemSlotFrame[i][n].desireTag)
+      iwtb.grpMemSlotFrame[i][n].note:SetWidth(16)
+      iwtb.grpMemSlotFrame[i][n].note:SetHeight(16)
+      iwtb.grpMemSlotFrame[i][n].note:ClearAllPoints()
+      iwtb.grpMemSlotFrame[i][n].note:SetPoint("BOTTOMRIGHT", 3, 0)
       
-      texture = grpMemSlotFrame[i][n].note:CreateTexture("iwtbgrpnotetex")
+      texture = iwtb.grpMemSlotFrame[i][n].note:CreateTexture("iwtbgrpnotetex")
       texture:SetWidth(16)
       texture:SetHeight(16)
       texture:SetPoint("TOPLEFT", 0, 0)
       texture:SetDrawLayer("ARTWORK",7)
       texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
-      grpMemSlotFrame[i][n].note.texture = texture
+      iwtb.grpMemSlotFrame[i][n].note.texture = texture
       
-      grpMemSlotFrame[i][n].note:SetAttribute("hasNote", false)
-      grpMemSlotFrame[i][n].note:SetAttribute("noteTxt", "")
-      grpMemSlotFrame[i][n].note:SetScript("OnEnter", function(s)
+      iwtb.grpMemSlotFrame[i][n].note:SetAttribute("hasNote", false)
+      iwtb.grpMemSlotFrame[i][n].note:SetAttribute("noteTxt", "")
+      iwtb.grpMemSlotFrame[i][n].note:SetScript("OnEnter", function(s)
                                   GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
-                                  if grpMemSlotFrame[i][n].note:GetAttribute("hasNote") then
-                                    GameTooltip:AddLine(grpMemSlotFrame[i][n].note:GetAttribute("noteTxt"))
+                                  if iwtb.grpMemSlotFrame[i][n].note:GetAttribute("hasNote") then
+                                    GameTooltip:AddLine(iwtb.grpMemSlotFrame[i][n].note:GetAttribute("noteTxt"))
                                     GameTooltip:Show()
                                   end
                                 end)
-      grpMemSlotFrame[i][n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
+      iwtb.grpMemSlotFrame[i][n].note:SetScript("OnLeave", function(s) GameTooltip:Hide() end)
     end
   end
   
@@ -2124,7 +1750,7 @@ function iwtb:OnEnable()
   rlResetDBButton:SetWidth(GUItabButtonSizeX)
   rlResetDBButton:SetHeight(GUItabButtonSizeY)
   rlResetDBButton:SetText(L["Reset DB"])
-  rlResetDBButton:SetPoint("BOTTOMRIGHT", -(GUIgrpSlotSizeX + GUItabButtonSizeX + 60), 20)
+  rlResetDBButton:SetPoint("BOTTOMRIGHT", -(iwtb.GUIgrpSlotSizeX + GUItabButtonSizeX + 60), 20)
   texture = rlResetDBButton:CreateTexture("rlresetdbbuttex")
   texture:SetAllPoints(rlResetDBButton)
   rlResetDBButton:Enable()
@@ -2138,13 +1764,58 @@ function iwtb:OnEnable()
   rlTestButton:SetWidth(GUItabButtonSizeX)
   rlTestButton:SetHeight(GUItabButtonSizeY)
   rlTestButton:SetText("Refresh")
-  rlTestButton:SetPoint("BOTTOMRIGHT", -(GUIgrpSlotSizeX + 50), 20)
+  rlTestButton:SetPoint("BOTTOMRIGHT", -(iwtb.GUIgrpSlotSizeX + 50), 20)
   texture = rlTestButton:CreateTexture("rltestbuttex")
   texture:SetAllPoints(rlTestButton)
   rlTestButton:Enable()
   rlTestButton:RegisterForClicks("LeftButtonUp")
   rlTestButton:SetScript("OnClick", function(s)
-    raidUpdate()
+    iwtb.raidUpdate()
+    drawOverviewSlots(instanceRLButton, bossesRLButton)
+  end)
+  
+  -- Raid Leader Overview button
+  local rlOverviewButton = CreateFrame("Button", "iwtbrloverviewbutton", rlRaiderListFrame, "UIPanelButtonTemplate")
+  rlOverviewButton:SetWidth(GUItabButtonSizeX)
+  rlOverviewButton:SetHeight(GUItabButtonSizeY)
+  rlOverviewButton:SetText(L["Overview"])
+  rlOverviewButton:SetPoint("BOTTOMLEFT", (iwtb.GUIgrpSlotSizeX + 20), 20)
+  rlOverviewButton:Enable()
+  rlOverviewButton:RegisterForClicks("LeftButtonUp")
+  rlOverviewButton:SetScript("OnClick", function(s)
+    rlRaiderListFrame:Hide()
+    bossesRLButton:Hide()
+    iwtb.drawOverviewColumns(iwtb.rlSelectedTier.instid)
+    iwtb.drawOverviewSlotsAll()
+    iwtb.rlRaiderOverviewFrame:Show()
+  end)
+  
+  -- Raid Leader Raid view button
+  local rlOverviewButton = CreateFrame("Button", "iwtbrlraidviewbutton", iwtb.rlRaiderOverviewFrame, "UIPanelButtonTemplate")
+  rlOverviewButton:SetWidth(GUItabButtonSizeX)
+  rlOverviewButton:SetHeight(GUItabButtonSizeY)
+  rlOverviewButton:SetFrameLevel(12)
+  rlOverviewButton:SetText(L["Raid view"])
+  rlOverviewButton:SetPoint("BOTTOMLEFT", (iwtb.GUIgrpSlotSizeX + 20), 20)
+  rlOverviewButton:Enable()
+  rlOverviewButton:RegisterForClicks("LeftButtonUp")
+  rlOverviewButton:SetScript("OnClick", function(s)
+    iwtb.rlRaiderOverviewFrame:Hide()
+    rlRaiderListFrame:Show()
+    bossesRLButton:Show()
+  end)
+  
+  -- Raid leader overview close button
+  local rlCloseButton = CreateFrame("Button", "iwtbrlovercloseButton", iwtb.rlRaiderOverviewFrame, "UIPanelButtonTemplate")
+  rlCloseButton:SetWidth(GUItabButtonSizeX)
+  rlCloseButton:SetHeight(GUItabButtonSizeY)
+  rlCloseButton:SetFrameLevel(12)
+  rlCloseButton:SetText(L["Close"])
+  rlCloseButton:SetPoint("BOTTOMLEFT", 20, 20)
+  rlCloseButton:Enable()
+  rlCloseButton:RegisterForClicks("LeftButtonUp")
+  rlCloseButton:SetScript("OnClick", function(s)
+    iwtb.windowframe.title:Hide()
   end)
   
   -- Raid leader close button
@@ -2158,36 +1829,273 @@ function iwtb:OnEnable()
   rlCloseButton:Enable()
   rlCloseButton:RegisterForClicks("LeftButtonUp")
   rlCloseButton:SetScript("OnClick", function(s)
-    windowframe.title:Hide()
+    iwtb.windowframe.title:Hide()
   end)
   
-  -- Out of raid scroll list for desire
-  rlRaiderNotListFrame = CreateFrame("ScrollFrame", "iwtbrloorframe", rlRaiderListFrame) 
-  rlRaiderNotListFrame:SetSize((GUIgrpSlotSizeX +10), (rlRaiderListFrame:GetHeight() -160))
-  rlRaiderNotListFrame:SetPoint("TOP", rlRaiderListFrame, 0, -55)
-  rlRaiderNotListFrame:SetPoint("BOTTOMRIGHT", rlRaiderListFrame, -30, 20)
-  rlRaiderNotListFrame:SetScript("OnMouseWheel", function(s,v)
-    local curV = rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
-    rlRaiderNotListFrame.rlOoRscrollbar:SetValue(curV + -(v * 15))
+  ----------------------------
+  -- Overview list (page 1)
+  ---------------------------
+  iwtb.rlRaiderOverviewListFrame[1] = CreateFrame("ScrollFrame", "iwtbrloverlistframe1", iwtb.rlRaiderOverviewFrame, "HybridScrollFrameTemplate") 
+  iwtb.rlRaiderOverviewListFrame[1]:SetSize((iwtb.rlRaiderOverviewFrame:GetWidth() -10), (iwtb.rlRaiderOverviewFrame:GetHeight() -140))
+  iwtb.rlRaiderOverviewListFrame[1]:SetPoint("TOPLEFT", iwtb.rlRaiderOverviewFrame, 0, -83)
+  iwtb.rlRaiderOverviewListFrame[1]:SetClipsChildren(true)
+  iwtb.rlRaiderOverviewListFrame[1]:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderOverviewListFrame[1].rlOverviewVScrollbar1:GetValue()
+    iwtb.rlRaiderOverviewListFrame[1].rlOverviewVScrollbar1:SetValue(curV + -(v * 15))
   end)
   
-  local texture = rlRaiderNotListFrame:CreateTexture("iwtboorlisttex") 
+  local texture = iwtb.rlRaiderOverviewListFrame[1]:CreateTexture("iwtboverviewlisttex1") 
+  texture:SetAllPoints(texture:GetParent())
+  texture:SetColorTexture(0, 0, 0, 0)
+  
+  fontstring = iwtb.rlRaiderOverviewListFrame[1]:CreateFontString("iwtboverviewlisttext")
+  fontstring:SetPoint("CENTER",0,0)
+  fontstring:SetFontObject("Game12Font")
+  fontstring:SetWidth(iwtb.GUIgrpSlotSizeX -15)
+  fontstring:SetJustifyV("CENTER")
+  fontstring:SetTextColor(1, 1, 1, 0.8)
+  fontstring:SetText(L["Raider Overview"])
+  iwtb.rlRaiderOverviewListFrame[1].text = fontstring
+
+  -- vert scrollbar 
+  local rlOverviewVScrollbar1 = CreateFrame("Slider", "iwtbrloverviewvscrollbar1", iwtb.rlRaiderOverviewListFrame[1], "UIPanelScrollBarTemplate")
+  rlOverviewVScrollbar1:SetPoint("TOPLEFT", iwtb.rlRaiderOverviewListFrame[1], "TOPRIGHT", -16, -63)
+  rlOverviewVScrollbar1:SetPoint("BOTTOMLEFT", iwtb.rlRaiderOverviewListFrame[1], "BOTTOMRIGHT", -16, 16)
+  rlOverviewVScrollbar1:SetMinMaxValues(1, 1)
+  rlOverviewVScrollbar1:SetValueStep(20)
+  rlOverviewVScrollbar1:SetValue(0)
+  rlOverviewVScrollbar1:SetWidth(16)
+  rlOverviewVScrollbar1:SetObeyStepOnDrag(true)
+  rlOverviewVScrollbar1:SetScript("OnValueChanged",
+  function (self, value)
+    self:GetParent():SetVerticalScroll(value)
+  end)
+  local scrollbg = rlOverviewVScrollbar1:CreateTexture(nil, "BACKGROUND")
+  scrollbg:SetAllPoints(rlOverviewVScrollbar1)
+  scrollbg:SetColorTexture(0.2, 0.2, 0.2, 0.4)
+  iwtb.rlRaiderOverviewListFrame[1].rlOverviewVScrollbar1 = rlOverviewVScrollbar1
+  
+  -- Content frame
+  local rlOverviewContent1 = CreateFrame("Frame", "iwtboverviewcontentlist1", iwtb.rlRaiderOverviewListFrame[1])
+  rlOverviewContent1:SetWidth((rlOverviewContent1:GetParent():GetWidth()) -2)
+  rlOverviewContent1:SetHeight(iwtb.rlRaiderOverviewListFrame[1]:GetHeight())
+  --rlOverviewContent1:SetClipsChildren(true)--iwtb.rlRaiderOverviewListFrame[1]:GetHeight())
+  rlOverviewContent1:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderOverviewListFrame[1].rlOverviewVScrollbar1:GetValue()
+    iwtb.rlRaiderOverviewListFrame[1].rlOverviewVScrollbar1:SetValue(curV + -(v * 15))
+  end)
+  rlOverviewContent1:ClearAllPoints()
+  rlOverviewContent1:SetPoint("TOPLEFT", 0, 0)
+  local texture = rlOverviewContent1:CreateTexture()
+  texture:SetAllPoints(texture:GetParent())
+
+  iwtb.rlRaiderOverviewListFrame[1]:SetScrollChild(rlOverviewContent1)
+  iwtb.rlRaiderOverviewListFrame[1].rlOverviewContent = rlOverviewContent1
+  
+  ----------------------------
+  -- Overview list (page 2)
+  ---------------------------
+  iwtb.rlRaiderOverviewListFrame[2] = CreateFrame("ScrollFrame", "iwtbrloverlistframe2", iwtb.rlRaiderOverviewFrame) 
+  iwtb.rlRaiderOverviewListFrame[2]:SetSize((iwtb.rlRaiderOverviewFrame:GetWidth() -20), (iwtb.rlRaiderOverviewFrame:GetHeight() -140))
+  iwtb.rlRaiderOverviewListFrame[2]:SetPoint("TOPLEFT", iwtb.rlRaiderOverviewFrame, 0, -83)
+  iwtb.rlRaiderOverviewListFrame[2]:SetClipsChildren(true)
+  iwtb.rlRaiderOverviewListFrame[2]:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderOverviewListFrame[2].rlOverviewVScrollbar2:GetValue()
+    iwtb.rlRaiderOverviewListFrame[2].rlOverviewVScrollbar2:SetValue(curV + -(v * 15))
+  end)
+  
+  local texture = iwtb.rlRaiderOverviewListFrame[2]:CreateTexture("iwtboverviewlisttex2") 
+  texture:SetAllPoints(texture:GetParent())
+  texture:SetColorTexture(0, 0, 0, 0)
+
+  -- vert scrollbar 
+  local rlOverviewVScrollbar2 = CreateFrame("Slider", "iwtbrloverviewvscrollbar2", iwtb.rlRaiderOverviewListFrame[2], "UIPanelScrollBarTemplate")
+  rlOverviewVScrollbar2:SetPoint("TOPLEFT", iwtb.rlRaiderOverviewListFrame[2], "TOPRIGHT", -16, -63)
+  rlOverviewVScrollbar2:SetPoint("BOTTOMLEFT", iwtb.rlRaiderOverviewListFrame[2], "BOTTOMRIGHT", -16, 16)
+  rlOverviewVScrollbar2:SetMinMaxValues(1, 200)
+  rlOverviewVScrollbar2:SetValueStep(10)
+  rlOverviewVScrollbar2:SetValue(0)
+  rlOverviewVScrollbar2:SetWidth(16)
+  rlOverviewVScrollbar2:SetObeyStepOnDrag(true)
+  rlOverviewVScrollbar2:SetScript("OnValueChanged",
+  function (self, value)
+    self:GetParent():SetVerticalScroll(value)
+  end)
+  local scrollbg = rlOverviewVScrollbar2:CreateTexture(nil, "BACKGROUND")
+  scrollbg:SetAllPoints(rlOverviewVScrollbar2)
+  scrollbg:SetColorTexture(0.2, 0.2, 0.2, 0.4)
+  iwtb.rlRaiderOverviewListFrame[2].rlOverviewVScrollbar2 = rlOverviewVScrollbar2
+  
+  -- Content frame
+  local rlOverviewContent2 = CreateFrame("Frame", "iwtboverviewcontentlist2", iwtb.rlRaiderOverviewListFrame[2])
+  rlOverviewContent2:SetWidth((rlOverviewContent2:GetParent():GetWidth()) -2)
+  rlOverviewContent2:SetHeight(iwtb.rlRaiderOverviewListFrame[2]:GetHeight())
+  rlOverviewContent2:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderOverviewListFrame[2].rlOverviewVScrollbar2:GetValue()
+    iwtb.rlRaiderOverviewListFrame[2].rlOverviewVScrollbar2:SetValue(curV + -(v * 15))
+  end)
+  rlOverviewContent2:ClearAllPoints()
+  rlOverviewContent2:SetPoint("TOPLEFT", 0, 0)
+  local texture = rlOverviewContent2:CreateTexture()
+  texture:SetAllPoints(texture:GetParent())
+
+  iwtb.rlRaiderOverviewListFrame[2]:SetScrollChild(rlOverviewContent2)
+  iwtb.rlRaiderOverviewListFrame[2].rlOverviewContent = rlOverviewContent2
+  
+  iwtb.rlRaiderOverviewListFrame[2]:Hide()
+  
+  ----------------------------
+  -- Overview list (page 3)
+  ---------------------------
+  iwtb.rlRaiderOverviewListFrame[3] = CreateFrame("ScrollFrame", "iwtbrloverlistframe3", iwtb.rlRaiderOverviewFrame) 
+  iwtb.rlRaiderOverviewListFrame[3]:SetSize((iwtb.rlRaiderOverviewFrame:GetWidth() -20), (iwtb.rlRaiderOverviewFrame:GetHeight() -140))
+  iwtb.rlRaiderOverviewListFrame[3]:SetPoint("TOPLEFT", iwtb.rlRaiderOverviewFrame, 0, -83)
+  iwtb.rlRaiderOverviewListFrame[3]:SetClipsChildren(true)
+  iwtb.rlRaiderOverviewListFrame[3]:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderOverviewListFrame[3].rlOverviewVScrollbar3:GetValue()
+    iwtb.rlRaiderOverviewListFrame[3].rlOverviewVScrollbar3:SetValue(curV + -(v * 15))
+  end)
+  
+  local texture = iwtb.rlRaiderOverviewListFrame[3]:CreateTexture("iwtboverviewlisttex3") 
+  texture:SetAllPoints(texture:GetParent())
+  texture:SetColorTexture(0, 0, 0, 0)
+
+  -- vert scrollbar 
+  local rlOverviewVScrollbar3 = CreateFrame("Slider", "iwtbrloverviewvscrollbar3", iwtb.rlRaiderOverviewListFrame[3], "UIPanelScrollBarTemplate")
+  rlOverviewVScrollbar3:SetPoint("TOPLEFT", iwtb.rlRaiderOverviewListFrame[3], "TOPRIGHT", -16, -63)
+  rlOverviewVScrollbar3:SetPoint("BOTTOMLEFT", iwtb.rlRaiderOverviewListFrame[3], "BOTTOMRIGHT", -16, 16)
+  rlOverviewVScrollbar3:SetMinMaxValues(1, 200)
+  rlOverviewVScrollbar3:SetValueStep(10)
+  rlOverviewVScrollbar3:SetValue(0)
+  rlOverviewVScrollbar3:SetWidth(16)
+  rlOverviewVScrollbar3:SetObeyStepOnDrag(true)
+  rlOverviewVScrollbar3:SetScript("OnValueChanged",
+  function (self, value)
+    self:GetParent():SetVerticalScroll(value)
+  end)
+  local scrollbg = rlOverviewVScrollbar3:CreateTexture(nil, "BACKGROUND")
+  scrollbg:SetAllPoints(rlOverviewVScrollbar3)
+  scrollbg:SetColorTexture(0.2, 0.2, 0.2, 0.4)
+  iwtb.rlRaiderOverviewListFrame[3].rlOverviewVScrollbar3 = rlOverviewVScrollbar3
+  
+  -- Content frame
+  local rlOverviewContent3 = CreateFrame("Frame", "iwtboverviewcontentlist3", iwtb.rlRaiderOverviewListFrame[3])
+  rlOverviewContent3:SetWidth((rlOverviewContent3:GetParent():GetWidth()) -2)
+  rlOverviewContent3:SetHeight(iwtb.rlRaiderOverviewListFrame[3]:GetHeight())
+  rlOverviewContent3:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderOverviewListFrame[3].rlOverviewVScrollbar3:GetValue()
+    iwtb.rlRaiderOverviewListFrame[3].rlOverviewVScrollbar3:SetValue(curV + -(v * 15))
+  end)
+  rlOverviewContent3:ClearAllPoints()
+  rlOverviewContent3:SetPoint("TOPLEFT", 0, 0)
+  local texture = rlOverviewContent3:CreateTexture()
+  texture:SetAllPoints(texture:GetParent())
+
+  iwtb.rlRaiderOverviewListFrame[3]:SetScrollChild(rlOverviewContent3)
+  iwtb.rlRaiderOverviewListFrame[3].rlOverviewContent = rlOverviewContent3
+  
+  iwtb.rlRaiderOverviewListFrame[3]:Hide()
+  
+  -- Raid leader overview prev button
+  iwtb.rlOverviewPrevButton = CreateFrame("Button", "iwtbrlOverviewPrevButton", iwtb.rlRaiderOverviewFrame)
+  iwtb.rlOverviewPrevButton:SetWidth(32)
+  iwtb.rlOverviewPrevButton:SetHeight(32)
+  iwtb.rlOverviewPrevButton:SetFrameLevel(12)
+  iwtb.rlOverviewPrevButton:SetPoint("BOTTOMRIGHT", -65, 20)
+  texture = iwtb.rlOverviewPrevButton:CreateTexture("rloverviewprevbuttex")
+  texture:SetAllPoints(iwtb.rlOverviewPrevButton)
+  texture:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Up")
+  iwtb.rlOverviewPrevButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+  iwtb.rlOverviewPrevButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Down")
+  iwtb.rlOverviewPrevButton:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-PrevPage-Disabled")
+  
+  iwtb.rlOverviewPrevButton:RegisterForClicks("LeftButtonUp")
+  iwtb.rlOverviewPrevButton:SetScript("OnClick", function(s)
+    if iwtb.rlRaiderOverviewListFrame[2]:IsShown() then
+      iwtb.rlRaiderOverviewListFrame[2]:Hide()
+      iwtb.rlRaiderOverviewListFrame[1]:Show()
+      s:Disable()
+      s:Hide()
+      iwtb.rlOverviewNextButton:Enable()
+      iwtb.rlOverviewNextButton:Show()
+      iwtb.overviewCreatureIconsHide(1)
+    elseif iwtb.rlRaiderOverviewListFrame[3]:IsShown() then
+      iwtb.rlRaiderOverviewListFrame[3]:Hide()
+      iwtb.rlRaiderOverviewListFrame[2]:Show()
+      iwtb.rlOverviewNextButton:Enable()
+      iwtb.rlOverviewNextButton:Show()
+      iwtb.overviewCreatureIconsHide(2)
+    end
+  end)
+  iwtb.rlOverviewPrevButton:Disable()
+  iwtb.rlOverviewPrevButton:Hide()
+  
+  -- Raid leader overview next button
+  iwtb.rlOverviewNextButton = CreateFrame("Button", "iwtbrloverviewnextButton", iwtb.rlRaiderOverviewFrame)
+  iwtb.rlOverviewNextButton:SetWidth(32)
+  iwtb.rlOverviewNextButton:SetHeight(32)
+  iwtb.rlOverviewNextButton:SetFrameLevel(12)
+  iwtb.rlOverviewNextButton:SetPoint("BOTTOMRIGHT", -30, 20)
+  texture = iwtb.rlOverviewNextButton:CreateTexture("rloverviewnextbuttex")
+  texture:SetAllPoints(iwtb.rlOverviewNextButton)
+  texture:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
+  iwtb.rlOverviewNextButton:SetHighlightTexture("Interface\\Buttons\\UI-Common-MouseHilight")
+  iwtb.rlOverviewNextButton:SetPushedTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Down")
+  iwtb.rlOverviewNextButton:SetDisabledTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Disabled")
+  
+  iwtb.rlOverviewNextButton:Enable()
+  iwtb.rlOverviewNextButton:RegisterForClicks("LeftButtonUp")
+  iwtb.rlOverviewNextButton:SetScript("OnClick", function(s)
+    if iwtb.rlRaiderOverviewListFrame[1]:IsShown() then
+      iwtb.rlRaiderOverviewListFrame[1]:Hide()
+      iwtb.rlRaiderOverviewListFrame[2]:Show()
+      iwtb.rlOverviewPrevButton:Enable()
+      iwtb.rlOverviewPrevButton:Show()
+      iwtb.overviewCreatureIconsHide(2)
+      print(rlOverviewContent2:GetNumChildren())
+      -- check if there are 7 bosses and hide "next" if not. Not ideal as it's possibly to have 14 bosses only.
+      if rlOverviewContent2:GetNumChildren() < 8 then
+        s:Hide()
+      end
+    elseif iwtb.rlRaiderOverviewListFrame[2]:IsShown() then
+      iwtb.rlRaiderOverviewListFrame[2]:Hide()
+      iwtb.rlRaiderOverviewListFrame[3]:Show()
+      s:Disable()
+      s:Hide()
+      iwtb.overviewCreatureIconsHide(3)
+    end
+  end)
+  
+  ----------------------------------------
+  -- Out of raid scroll list for desire --
+  ----------------------------------------
+  iwtb.rlRaiderNotListFrame = CreateFrame("ScrollFrame", "iwtbrloorframe", rlRaiderListFrame) 
+  iwtb.rlRaiderNotListFrame:SetSize((iwtb.GUIgrpSlotSizeX +10), (rlRaiderListFrame:GetHeight() -160))
+  iwtb.rlRaiderNotListFrame:SetPoint("TOP", rlRaiderListFrame, 0, -55)
+  iwtb.rlRaiderNotListFrame:SetPoint("BOTTOMRIGHT", rlRaiderListFrame, -30, 20)
+  iwtb.rlRaiderNotListFrame:SetClipsChildren(true)
+  iwtb.rlRaiderNotListFrame:SetScript("OnMouseWheel", function(s,v)
+    local curV = iwtb.rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
+    iwtb.rlRaiderNotListFrame.rlOoRscrollbar:SetValue(curV + -(v * 15))
+  end)
+  
+  local texture = iwtb.rlRaiderNotListFrame:CreateTexture("iwtboorlisttex") 
   texture:SetAllPoints(texture:GetParent())
   texture:SetColorTexture(0.2, 0.2, 0.2, 0.4)
   
-  fontstring = rlRaiderNotListFrame:CreateFontString("iwtboorlisttext")
+  fontstring = iwtb.rlRaiderNotListFrame:CreateFontString("iwtboorlisttext")
   fontstring:SetPoint("CENTER",0,0)
   fontstring:SetFontObject("Game12Font")
-  fontstring:SetWidth(GUIgrpSlotSizeX -15)
+  fontstring:SetWidth(iwtb.GUIgrpSlotSizeX -15)
   fontstring:SetJustifyV("CENTER")
   fontstring:SetTextColor(1, 1, 1, 0.8)
   fontstring:SetText(L["Out of raid players"])
-  rlRaiderNotListFrame.text = fontstring
+  iwtb.rlRaiderNotListFrame.text = fontstring
 
   --scrollbar 
-  local rlOoRscrollbar = CreateFrame("Slider", "iwtbrloorscrollbar", rlRaiderNotListFrame, "UIPanelScrollBarTemplate")
-  rlOoRscrollbar:SetPoint("TOPLEFT", rlRaiderNotListFrame, "TOPRIGHT", 4, -16)
-  rlOoRscrollbar:SetPoint("BOTTOMLEFT", rlRaiderNotListFrame, "BOTTOMRIGHT", 4, 16)
+  local rlOoRscrollbar = CreateFrame("Slider", "iwtbrloorscrollbar", iwtb.rlRaiderNotListFrame, "UIPanelScrollBarTemplate")
+  rlOoRscrollbar:SetPoint("TOPLEFT", iwtb.rlRaiderNotListFrame, "TOPRIGHT", 4, -16)
+  rlOoRscrollbar:SetPoint("BOTTOMLEFT", iwtb.rlRaiderNotListFrame, "BOTTOMRIGHT", 4, 16)
   rlOoRscrollbar:SetMinMaxValues(1, 1)
   rlOoRscrollbar:SetValueStep(20)
   --rlOoRscrollbar.scrollStep = 10 
@@ -2201,40 +2109,40 @@ function iwtb:OnEnable()
   local scrollbg = rlOoRscrollbar:CreateTexture(nil, "BACKGROUND")
   scrollbg:SetAllPoints(rlOoRscrollbar)
   scrollbg:SetColorTexture(0.2, 0.2, 0.2, 0.4)
-  rlRaiderNotListFrame.rlOoRscrollbar = rlOoRscrollbar
+  iwtb.rlRaiderNotListFrame.rlOoRscrollbar = rlOoRscrollbar
 
   -- Content frame
-  local rlOoRcontent = CreateFrame("Frame", "iwtbrloorlist", rlRaiderNotListFrame)
+  local rlOoRcontent = CreateFrame("Frame", "iwtbrloorlist", iwtb.rlRaiderNotListFrame)
   rlOoRcontent:SetWidth((rlOoRcontent:GetParent():GetWidth()) -2)
-  rlOoRcontent:SetHeight(rlRaiderNotListFrame:GetHeight())
+  rlOoRcontent:SetHeight(iwtb.rlRaiderNotListFrame:GetHeight())
   rlOoRcontent:SetScript("OnMouseWheel", function(s,v)
-    local curV = rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
-    rlRaiderNotListFrame.rlOoRscrollbar:SetValue(curV + -(v * 15))
+    local curV = iwtb.rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
+    iwtb.rlRaiderNotListFrame.rlOoRscrollbar:SetValue(curV + -(v * 15))
   end)
   rlOoRcontent:ClearAllPoints()
   rlOoRcontent:SetPoint("TOPLEFT", 0, 0)
   local texture = rlOoRcontent:CreateTexture()
   texture:SetAllPoints(texture:GetParent())
 
-  rlRaiderNotListFrame:SetScrollChild(rlOoRcontent)
-  rlRaiderNotListFrame.rlOoRcontent = rlOoRcontent
+  iwtb.rlRaiderNotListFrame:SetScrollChild(rlOoRcontent)
+  iwtb.rlRaiderNotListFrame.rlOoRcontent = rlOoRcontent
   
   ------------------------------------------------
   -- Dropdown buttons (for raid leader tab)
   ------------------------------------------------
-  expacRLButton = CreateFrame("Frame", "expacrlbutton", rlTab, "L_UIDropDownMenuTemplate")
+  expacRLButton = CreateFrame("Frame", "expacrlbutton", iwtb.rlTab, "L_UIDropDownMenuTemplate")
   expacRLButton:SetPoint("TOPLEFT", 0, -20)
   L_UIDropDownMenu_SetWidth(expacRLButton, 200)
   L_UIDropDownMenu_Initialize(expacRLButton, raidsDropdownMenu)
   L_UIDropDownMenu_SetText(expacRLButton, L["Select expansion"])
   
-  instanceRLButton = CreateFrame("Frame", "instancerlbutton", rlTab, "L_UIDropDownMenuTemplate")
+  instanceRLButton = CreateFrame("Frame", "instancerlbutton", iwtb.rlTab, "L_UIDropDownMenuTemplate")
   instanceRLButton:SetPoint("TOPLEFT", 250, -20)
   L_UIDropDownMenu_SetWidth(instanceRLButton, 200)
   L_UIDropDownMenu_Initialize(instanceRLButton, raidsDropdownMenu)
   L_UIDropDownMenu_SetText(instanceRLButton, L["Select raid"])
   
-  bossesRLButton = CreateFrame("Frame", "bossesrlbutton", rlTab, "L_UIDropDownMenuTemplate")
+  bossesRLButton = CreateFrame("Frame", "bossesrlbutton", iwtb.rlTab, "L_UIDropDownMenuTemplate")
   bossesRLButton:SetFrameLevel(7)
   bossesRLButton:SetPoint("TOPLEFT", 500, -20)
   L_UIDropDownMenu_SetWidth(bossesRLButton, 200)
@@ -2245,20 +2153,20 @@ function iwtb:OnEnable()
   --------------------------------------------------------------------------------------------------------------
   
   -- Dropdown buttons (for raider tab)
-  expacButton = CreateFrame("Frame", "expacbutton", raiderTab, "L_UIDropDownMenuTemplate")
+  expacButton = CreateFrame("Frame", "expacbutton", iwtb.raiderTab, "L_UIDropDownMenuTemplate")
   expacButton:SetPoint("TOPLEFT", 0, -20)
   L_UIDropDownMenu_SetWidth(expacButton, 200) -- Use in place of dropDown:SetWidth
   L_UIDropDownMenu_Initialize(expacButton, raidsDropdownMenu)
   L_UIDropDownMenu_SetText(expacButton, L["Select expansion"])
   
-  instanceButton = CreateFrame("Frame", "instancebutton", raiderTab, "L_UIDropDownMenuTemplate")
+  instanceButton = CreateFrame("Frame", "instancebutton", iwtb.raiderTab, "L_UIDropDownMenuTemplate")
   instanceButton:SetPoint("TOPLEFT", 250, -20)
   L_UIDropDownMenu_SetWidth(instanceButton, 200) -- Use in place of dropDown:SetWidth
   L_UIDropDownMenu_Initialize(instanceButton, raidsDropdownMenu)
   L_UIDropDownMenu_SetText(instanceButton, L["Select raid"])
   
   -- Add tab buttons
-  local raiderButton = CreateFrame("Button", "$parentTab1", windowframe, "TabButtonTemplate")
+  local raiderButton = CreateFrame("Button", "$parentTab1", iwtb.windowframe, "TabButtonTemplate")
   raiderButton:SetWidth(GUItabButtonSizeX)
   raiderButton:SetHeight(GUItabButtonSizeY)
   PanelTemplates_TabResize(_G["iwtbwindowTab1"], 0, nil, GUItabButtonSizeX-30, GUItabButtonSizeY)
@@ -2270,12 +2178,12 @@ function iwtb:OnEnable()
   raiderButton:Enable()
   raiderButton:RegisterForClicks("LeftButtonUp")
   raiderButton:SetScript("OnClick", function(s)
-    PanelTemplates_SetTab(windowframe, 1)
-    raiderTab:Show()
-    rlTab:Hide()
+    PanelTemplates_SetTab(iwtb.windowframe, 1)
+    iwtb.raiderTab:Show()
+    iwtb.rlTab:Hide()
   end)
   
-  local raidLeaderButton = CreateFrame("Button", "$parentTab2", windowframe, "TabButtonTemplate")
+  local raidLeaderButton = CreateFrame("Button", "$parentTab2", iwtb.windowframe, "TabButtonTemplate")
   raidLeaderButton:SetWidth(GUItabButtonSizeX)
   raidLeaderButton:SetHeight(GUItabButtonSizeY)
   PanelTemplates_TabResize(_G["iwtbwindowTab2"], 0, nil, GUItabButtonSizeX-30, GUItabButtonSizeY)
@@ -2287,13 +2195,13 @@ function iwtb:OnEnable()
   raidLeaderButton:Enable()
   raidLeaderButton:RegisterForClicks("LeftButtonUp")
   raidLeaderButton:SetScript("OnClick", function(s)
-    PanelTemplates_SetTab(windowframe, 2)     -- 1 because we want tab 1 selected.
-    rlTab:Show()  -- Hide all other pages (in this case only one).
-    raidUpdate()
-    raiderTab:Hide()  -- Show page 1.
+    PanelTemplates_SetTab(iwtb.windowframe, 2)     -- 1 because we want tab 1 selected.
+    iwtb.rlTab:Show()  -- Hide all other pages (in this case only one).
+    iwtb.raidUpdate()
+    iwtb.raiderTab:Hide()  -- Show page 1.
   end)
   
-  local optionsButton = CreateFrame("Button", "$parentTab3", windowframe, "TabButtonTemplate")
+  local optionsButton = CreateFrame("Button", "$parentTab3", iwtb.windowframe, "TabButtonTemplate")
   optionsButton:SetWidth(GUItabButtonSizeX)
   optionsButton:SetHeight(GUItabButtonSizeY)
   PanelTemplates_TabResize(_G["iwtbwindowTab3"], 0, nil, GUItabButtonSizeX-30, GUItabButtonSizeY)
@@ -2305,7 +2213,7 @@ function iwtb:OnEnable()
   optionsButton:Enable()
   optionsButton:RegisterForClicks("LeftButtonUp")
   optionsButton:SetScript("OnClick", function(s)
-    windowframe.title:Hide()
+    iwtb.windowframe.title:Hide()
     InterfaceCategoryList_Update()
     InterfaceOptionsOptionsFrame_RefreshCategories()
     InterfaceAddOnsList_Update()
@@ -2463,24 +2371,24 @@ function iwtb:OnEnable()
   ----------------
   -- Register tabs
   ----------------
-  PanelTemplates_SetNumTabs(windowframe, 3)  -- 2 because there are 2 frames total.
-  PanelTemplates_SetTab(windowframe, 1)     -- 1 because we want tab 1 selected.
-  raiderTab:Show()  -- Show page 1.
-  rlTab:Hide()  -- Hide all other pages (in this case only one).
+  PanelTemplates_SetNumTabs(iwtb.windowframe, 3)  -- 2 because there are 2 frames total.
+  PanelTemplates_SetTab(iwtb.windowframe, 1)     -- 1 because we want tab 1 selected.
+  iwtb.raiderTab:Show()  -- Show page 1.
+  iwtb.rlTab:Hide()  -- Hide all other pages (in this case only one).
   
   -- Hide or show main window on start via options
   if db.char.showOnStart then
-    windowframe.title:Show()
+    iwtb.windowframe.title:Show()
   end
   
   -- Set the dropdowns programmatically. Allow this via options?
-  raidsDropdownMenuOnClick(expacButton.Button,7,"expacbutton")
-  raidsDropdownMenuOnClick(expacRLButton.Button,7,"expacrlbutton")
-  raidsDropdownMenuOnClick(instanceButton.Button,946,"instancebutton")
-  raidsDropdownMenuOnClick(instanceRLButton.Button,946,"instancerlbutton")
+  iwtb.raidsDropdownMenuOnClick(expacButton.Button,7,"expacbutton")
+  iwtb.raidsDropdownMenuOnClick(expacRLButton.Button,7,"expacrlbutton")
+  iwtb.raidsDropdownMenuOnClick(instanceButton.Button,946,"instancebutton")
+  iwtb.raidsDropdownMenuOnClick(instanceRLButton.Button,946,"instancerlbutton")
   
   -- Register listening events
-  iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", raidUpdate)
+  iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", iwtb.raidUpdate)
   iwtb:RegisterEvent("RAID_INSTANCE_WELCOME", enterInstance)
   iwtb:RegisterEvent("GROUP_LEFT", leftGroup)
   iwtb:RegisterEvent("PLAYER_ENTERING_WORLD", playerEnteringWorld)

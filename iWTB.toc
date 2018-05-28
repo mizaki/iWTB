@@ -1,5 +1,5 @@
 ## Interface: 70300
-## Version: 0.075
+## Version: 0.08
 ## Title: iWTB
 ## Author: jinxybob
 ## Notes: Helps organise which raider wants which boss.
@@ -12,7 +12,6 @@ embeds.xml
 ## Locale Translations
 Locales\Locales.xml
 
-
-
 Core.lua
+raidleader.lua
 Comms.lua

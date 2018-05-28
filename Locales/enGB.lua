@@ -15,11 +15,8 @@ L["Select expansion"] = true
 L["Select raid"] = true
 L["Select boss"] = true
 L["Select desirability"] = true
-L["Send"] = true
-L["Save & Send"] = true
 L["Empty"] = true
 L["Unknown desire"] = true
-L["Reset DB"] = true
 L["BiS"] = true
 L["Need"] = true
 L["Minor"] = true
@@ -29,13 +26,21 @@ L["No data"] = true
 L["Remove data"] = true
 L["Remove"] = true
 L["Cancel"] = true
+L["Out of raid players"] = true
+L["Raider Overview"] = true
+L["Boss killed!"] = true
+
+-- Buttons
+L["Add note"] = true
+L["Edit note"] = true
 L["Close"] = true
 L["Tutorial"] = true
 L["Options"] = true
-L["Out of raid players"] = true
-L["Boss killed!"] = true
-L["Add note"] = true
-L["Edit note"] = true
+L["Send"] = true
+L["Save & Send"] = true
+L["Reset DB"] = true
+L["Overview"] = true
+L["Raid view"] = true
 
 -- Options
 L["GUI"] = true
