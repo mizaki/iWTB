@@ -4,6 +4,7 @@ local rlRaiderOverviewFrameSlots = {} -- raid leader overview slots
 local rlRaiderOverviewFrameColumns = {} -- overview columns
 local overviewCreatureFrame = {} -- Boss icon for overview columns
 local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.328125, bottom = 0.625}, HEALER = {left = 0.3125, right = 0.609375, top = 0.015625, bottom = 0.3125}, TANK = {left = 0, right = 0.296875, top = 0.328125, bottom = 0.625}, NONE = {left = 0.296875, right = 0.3, top = 0.625, bottom = 0.650}};
+local rlStatusContent = {} -- RL status lines 1-10
 
 -- Lovingly "inspired" by RSUM
 function FrameContainsPoint(frame, x, y)
@@ -116,8 +117,18 @@ function hasNote(name, tier, boss) -- compare the player name to the rl db to se
   return false, ""
 end
 
+function iwtb.overviewCreatureIconsHideAll()
+  -- Hide all
+  if overviewCreatureFrame then
+    for i=1, #overviewCreatureFrame do
+      overviewCreatureFrame[i]:Hide()
+      --overviewCreatureFrame[i].bg:Hide()
+    end
+  end
+end
+
 function iwtb.overviewCreatureIconsHide(curPage) -- TODO: Take account of instance switching with less bosses e.g. Antorus to Trial
-  print("curPage: ", curPage)
+  --print("curPage: ", curPage)
   local showMax = #overviewCreatureFrame
   
   if #overviewCreatureFrame > 7 and curPage == 1 then
@@ -126,44 +137,60 @@ function iwtb.overviewCreatureIconsHide(curPage) -- TODO: Take account of instan
     showMax = 14
   end
   
-  print("showMax: ", showMax)
+  --print("showMax: ", showMax)
   -- Hide all
-  for i=1, #overviewCreatureFrame do
+  --[[for i=1, #overviewCreatureFrame do
     overviewCreatureFrame[i]:Hide()
     overviewCreatureFrame[i].bg:Hide()
-  end
+  end]]
   
   if curPage == 1 then
     for i=1, showMax do
-      overviewCreatureFrame[i]:Show()
-      overviewCreatureFrame[i].bg:Show()
+      --print(overviewCreatureFrame[i]:GetAttribute("show"))
+      --if overviewCreatureFrame[i]:GetAttribute("show") then
+        overviewCreatureFrame[i]:Show()
+        overviewCreatureFrame[i].bg:Show()
+      --end
     end
   elseif curPage == 2 then
-    print("in curPage2")
+    --print("in curPage2")
     for i=8, showMax do
-      print("show: ", i)
-      overviewCreatureFrame[i]:Show()
-      overviewCreatureFrame[i].bg:Show()
+      --if overviewCreatureFrame[i]:GetAttribute("show") then
+        overviewCreatureFrame[i]:Show()
+        overviewCreatureFrame[i].bg:Show()
+      --end
     end
   elseif curPage == 3 then
     for i=15, showMax do
-      overviewCreatureFrame[i]:Show()
-      overviewCreatureFrame[i].bg:Show()
+      --if overviewCreatureFrame[i]:GetAttribute("show") then
+        overviewCreatureFrame[i]:Show()
+        overviewCreatureFrame[i].bg:Show()
+      --end
     end
   end
 end
 
 function iwtb.overviewCreatureIcons(i, bossid, columnX)
-  --print("#: ", #overviewCreatureFrame)
-  --if wipeOld then wipe(iwtb.rlRaiderOverviewFrameColumns) end
+  -- Mark all current frame to not show
+  --[[print("overviewCreatureIcons")
+  if overviewCreatureFrame[i] then
+    print("overviewCreatureFrame")
+    for i=1, #overviewCreatureFrame do
+      print("hide: ", i)
+      overviewCreatureFrame[i]:Hide()
+      overviewCreatureFrame[i].bg:Hide()
+    end
+  end]]
+  
   if overviewCreatureFrame[i] == nil then
     -- Create a frame to go over the top of the scroll raider list
     overviewCreatureFrame[i] = CreateFrame("Frame", "iwtboverviewcreature" .. i, iwtb.rlRaiderOverviewFrame)
     overviewCreatureFrame[i]:SetSize(iwtb.GUIgrpSlotSizeX, 75)
     overviewCreatureFrame[i]:SetPoint("TOPLEFT", columnX, -48)
     overviewCreatureFrame[i]:SetFrameLevel(11)
+    --overviewCreatureFrame[i]:SetAttribute("show", true)
     
-    overviewCreatureFrame[i].bg = CreateFrame("Frame", "iwtboverviewcreature" .. i, iwtb.rlRaiderOverviewFrame)
+    overviewCreatureFrame[i].bg = CreateFrame("Frame", "iwtboverviewcreature" .. i, overviewCreatureFrame[i])
     overviewCreatureFrame[i].bg:SetSize(iwtb.GUIgrpSlotSizeX, 80)
     overviewCreatureFrame[i].bg:SetPoint("TOPLEFT", columnX, -48)
     overviewCreatureFrame[i].bg:SetFrameLevel(10)
@@ -171,7 +198,7 @@ function iwtb.overviewCreatureIcons(i, bossid, columnX)
     local texture = overviewCreatureFrame[i].bg:CreateTexture("iwtboverviewcreaturebgtex" .. i)
     texture:SetSize(iwtb.GUIgrpSlotSizeX, 75)
     texture:SetAllPoints(overviewCreatureFrame[i])
-    texture:SetColorTexture(0.2,0.2,0.8,0.7)
+    texture:SetColorTexture(0.1,0.1,0.6,1)
     
     local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, bossid)
     bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
@@ -186,13 +213,13 @@ function iwtb.overviewCreatureIcons(i, bossid, columnX)
     overviewCreatureFrame[i].fontFrame = CreateFrame("Frame", "iwtbcreaturefontframe", overviewCreatureFrame[i])
     overviewCreatureFrame[i].fontFrame:ClearAllPoints()
     overviewCreatureFrame[i].fontFrame:SetHeight(30)
-    overviewCreatureFrame[i].fontFrame:SetWidth(100)
+    overviewCreatureFrame[i].fontFrame:SetWidth(iwtb.GUIgrpSlotSizeX)
     overviewCreatureFrame[i].fontFrame:SetPoint("CENTER", 0, -25)
     
     texture = overviewCreatureFrame[i].fontFrame:CreateTexture("iwtboverviewcreaturetexttex" .. i)
     texture:SetSize(100, 20)
     texture:SetAllPoints(overviewCreatureFrame[i].fontFrame)
-    texture:SetColorTexture(0, 0, 0, 0.3)
+    texture:SetColorTexture(0, 0, 0, 0.4)
     
     local fontstring = overviewCreatureFrame[i].fontFrame:CreateFontString("iwtboverviewbosstext" .. i)
     fontstring:SetAllPoints(overviewCreatureFrame[i].fontFrame)
@@ -205,21 +232,41 @@ function iwtb.overviewCreatureIcons(i, bossid, columnX)
     -- Hide if not on first frame
     if i > 7 then
       overviewCreatureFrame[i]:Hide()
-      overviewCreatureFrame[i].bg:Hide()
+      --overviewCreatureFrame[i].bg:Hide()
     end
   else
     -- Reuse frames
     print("reuse creature icon frame")
     local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, bossid)
     bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
-    
+    print(bossName)
     overviewCreatureFrame[i].texture:SetTexture(bossImage)
+    --overviewCreatureFrame[i]:SetAttribute("show", true)
     overviewCreatureFrame[i].fontFrame.text:SetText(iwtb.instanceBosses.bosses[iwtb.instanceBosses.order[i]])
+    
+    overviewCreatureFrame[i]:Show()
+    overviewCreatureFrame[i].bg:Show()
+  end
+end
+
+function iwtb.drawOverviewColumnsHideAll()
+  -- Hide all
+  if #rlRaiderOverviewFrameColumns then
+    for i=1, #rlRaiderOverviewFrameColumns do
+      rlRaiderOverviewFrameColumns[i]:Hide()
+    end
   end
 end
 
 -- Draw Overview rows (1 row per boss)
 function iwtb.drawOverviewColumns(instid)
+  -- Hide all
+  --[[if #rlRaiderOverviewFrameColumns then
+    for i=1, #rlRaiderOverviewFrameColumns do
+      rlRaiderOverviewFrameColumns[i]:Hide()
+    end
+  end]]
+  
   local curPage = 1
   for i=1, #iwtb.instanceBosses.order do
     --if i > 7 then break end
@@ -236,14 +283,17 @@ function iwtb.drawOverviewColumns(instid)
       if rlRaiderOverviewFrameColumns[i]:GetAttribute("bossid") ~= bossid then
         -- Redraw with new boss
         rlRaiderOverviewFrameColumns[i]:SetAttribute("bossid", bossid)
-        local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, bossid)
+        --[[local _, bossName, _, _, bossImage = EJ_GetCreatureInfo(1, bossid)
         bossImage = bossImage or "Interface\\EncounterJournal\\UI-EJ-BOSS-Default"
         
         if not overviewCreatureFrame[i] then iwtb.overviewCreatureIcons(i,bossid,columnX) end
         
-        overviewCreatureFrame[i].texture:SetTexture(bossImage)
-        overviewCreatureFrame[i].fontFrame.text:SetText(iwtb.instanceBosses.bosses[iwtb.instanceBosses.order[i]])
+        overviewCreatureFrame[i].texture:SetTexture(bossImage)]]
+        --overviewCreatureFrame[i].fontFrame.text:SetText(iwtb.instanceBosses.bosses[iwtb.instanceBosses.order[i]])
+        
       end
+      iwtb.overviewCreatureIcons(i,bossid,columnX)
+      rlRaiderOverviewFrameColumns[i]:Show()
     else -- don't have column, create it.
       -- horrible way for now
       
@@ -268,7 +318,28 @@ function iwtb.drawOverviewColumns(instid)
 end
 
 function iwtb.drawOverviewSlotsAll()
-
+  -- Hide all
+  local curSlots = 0
+  --local curColumns = 0
+  --if rlRaiderOverviewFrameColumns[c] then curSlots = rlRaiderOverviewFrameColumns[c]:GetNumChildren() end
+  --if rlRaiderOverviewFrameColumns then curColumns = #rlRaiderOverviewFrameColumns end
+  --print("curSlots: ", curSlots)
+  --print("curColumns: ", curColumns)
+  
+  -- Hide any current slots
+  if rlRaiderOverviewFrameColumns and #rlRaiderOverviewFrameColumns > 0 then
+    for n=1, #rlRaiderOverviewFrameColumns do
+      curSlots = rlRaiderOverviewFrameColumns[n]:GetNumChildren()
+      if curSlots > 0 then
+        for i=1, curSlots do
+          if rlRaiderOverviewFrameSlots[n][i] then
+            rlRaiderOverviewFrameSlots[n][i]:Hide()
+          end
+        end
+      end
+    end
+  end
+  
   for i=1, #iwtb.instanceBosses.order do
     --print("i: ", i, "order: ", iwtb.instanceBosses.order[i], "c: ", c)
     iwtb.drawOverviewSlots(iwtb.rlSelectedTier.instid, iwtb.instanceBosses.order[i], i)
@@ -280,23 +351,31 @@ end
 function iwtb.drawOverviewSlots(instid, bossid, c)
   -- Find number of current slots
   local curSlots = 0
+  --[[local curColumns = 0
   if rlRaiderOverviewFrameColumns[c] then curSlots = rlRaiderOverviewFrameColumns[c]:GetNumChildren() end
+  if rlRaiderOverviewFrameColumns then curColumns = #rlRaiderOverviewFrameColumns end]]
   
   -- Hide any current slots
-  --[[for i=1,curSlots do
-    rlRaiderOverviewFrameSlots[c][n]:Hide()
+  --[[if curColumns > 0 then
+    for n=1,curColumns do
+      if curSlots > 0 then
+        for i=1,curSlots do
+          if rlRaiderOverviewFrameSlots[n][i] then
+            rlRaiderOverviewFrameSlots[n][i]:Hide()
+          end
+        end
+      end
+    end
   end]]
   
   local function createOverviewSlot(n, name, desireid, notetxt)
-    print(n, name, desireid, notetxt)
+    --print(n, name, desireid, notetxt)
     --print("create overview slot")
     --print_table(#rlRaiderOverviewFrameColumns)
     if not rlRaiderOverviewFrameSlots[c] then rlRaiderOverviewFrameSlots[c] = {} end
     rlRaiderOverviewFrameSlots[c][n] = CreateFrame("Button", "iwtbrloverviewslot" .. n, rlRaiderOverviewFrameColumns[c])
     rlRaiderOverviewFrameSlots[c][n]:SetSize(iwtb.GUIgrpSlotSizeX, iwtb.GUIgrpSlotSizeY)
     rlRaiderOverviewFrameSlots[c][n]:SetPoint("TOPLEFT", 0, -(iwtb.GUIgrpSlotSizeY * (n)))
-    
-    --print("595", rlRaiderOverviewFrameColumns[c]:GetNumChildren())
     
     rlRaiderOverviewFrameSlots[c][n]:SetBackdrop({
       bgFile = "Interface/Tooltips/UI-Tooltip-Background",
@@ -331,7 +410,6 @@ function iwtb.drawOverviewSlots(instid, bossid, c)
     rlRaiderOverviewFrameSlots[c][n].desireTag.text:SetPoint("CENTER")
     rlRaiderOverviewFrameSlots[c][n].desireTag.text:SetJustifyH("CENTER")
     rlRaiderOverviewFrameSlots[c][n].desireTag.text:SetJustifyV("BOTTOM")
-    --rlRaiderOverviewFrameSlots[c][n].desireTag.text:SetFont(GUIfont, 10, "")
     rlRaiderOverviewFrameSlots[c][n].desireTag.text:SetFontObject("SpellFont_Small")
     rlRaiderOverviewFrameSlots[c][n].desireTag.text:SetText(iwtb.desire[desireid] or L["Unknown desire"])
     
@@ -394,16 +472,17 @@ function iwtb.drawOverviewSlots(instid, bossid, c)
                   rlRaiderOverviewFrameSlots[c][i].nameText:SetText(name)
                   rlRaiderOverviewFrameSlots[c][i].desireTag.text:SetText(iwtb.desire[bosstbl.desireid] or L["Unknown desire"])
                   
-                  if bosstbl.notetxt then
+                  if bosstbl.note then
                     rlRaiderOverviewFrameSlots[c][i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
                     rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("hasNote", true)
-                    rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("noteTxt", bosstbl.notetxt)
+                    rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("noteTxt", bosstbl.note)
                   else
                     rlRaiderOverviewFrameSlots[c][i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Disabled")
                     rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("hasNote", false)
                     rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("noteTxt", "")
                   end
                   rlRaiderOverviewFrameSlots[c][i]:Show()
+                  --print("show: ", c, " - ", i)
                 end
               end
             end
@@ -414,7 +493,7 @@ function iwtb.drawOverviewSlots(instid, bossid, c)
       end
       
       i = i +1
-      --if i > 5 then iwtb.rlRaiderOverviewListFrame.text:Hide() else iwtb.rlRaiderOverviewListFrame.text:Show() end
+      if i > 5 then iwtb.rlRaiderOverviewListFrame[1].text:Hide() else iwtb.rlRaiderOverviewListFrame[1].text:Show() end
     end
   --iwtb.rlRaiderOverviewListFrame.rlOoRcontent:SetHeight(iwtb.GUIgrpSlotSizeY * i + 5)
   iwtb.rlRaiderOverviewListFrame[1].rlOverviewVScrollbar1:SetMinMaxValues(1, (i)*((iwtb.GUIgrpSlotSizeY)/1.5))
@@ -678,6 +757,7 @@ end
 function iwtb.setStatusText(f, text)
   local curTop = iwtb.rlTab.rlStatusPanel.text:GetText()
   local function churnContent(statuses)
+    iwtb.print_table(statuses)
     -- insert at top
     table.insert(statuses, 1, curTop)
     -- remove bottom

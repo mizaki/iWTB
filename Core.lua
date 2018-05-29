@@ -44,7 +44,7 @@ local bossKillInfo = {bossid = 0, desireid = 0, expacid = 0, instid = 0}
 local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
 iwtb.rlSelectedTier = {} -- Must be a better way but cba for now.
 
-local rlStatusContent = {} -- RL status lines 1-10
+--local rlStatusContent = {} -- RL status lines 1-10
 
 --Dropdown menu frames
 local expacButton = nil
@@ -75,7 +75,7 @@ local GUIkillWindowSizeY = 160
 -- API Calls and functions
 
 --author: Alundaio (aka Revolucas)
-local function print_table(node)
+function iwtb.print_table(node)
     if type(node) ~= "table" then
       print("print_table called on non-table")
       print(node)
@@ -164,6 +164,7 @@ local function print_table(node)
    
     print(output_str)
 end
+local print_table = iwtb.print_table
 
 local function printTable(table)
   --print(type(table))
@@ -1576,8 +1577,9 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     button1 = "Yes",
     button2 = "No",
     OnAccept = function()
-        raidLeaderDB:ResetDB()
         rlProfileDB:ResetDB()
+        if raidLeaderDB then raidLeaderDB:ResetDB() end
+        
     end,
     timeout = 0,
     whileDead = true,
@@ -1771,7 +1773,6 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   rlTestButton:RegisterForClicks("LeftButtonUp")
   rlTestButton:SetScript("OnClick", function(s)
     iwtb.raidUpdate()
-    drawOverviewSlots(instanceRLButton, bossesRLButton)
   end)
   
   -- Raid Leader Overview button
@@ -1785,7 +1786,10 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   rlOverviewButton:SetScript("OnClick", function(s)
     rlRaiderListFrame:Hide()
     bossesRLButton:Hide()
+    iwtb.drawOverviewColumnsHideAll()
     iwtb.drawOverviewColumns(iwtb.rlSelectedTier.instid)
+    iwtb.overviewCreatureIconsHideAll()
+    iwtb.overviewCreatureIconsHide(1)
     iwtb.drawOverviewSlotsAll()
     iwtb.rlRaiderOverviewFrame:Show()
   end)
@@ -2018,12 +2022,14 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
       s:Hide()
       iwtb.rlOverviewNextButton:Enable()
       iwtb.rlOverviewNextButton:Show()
+      iwtb.overviewCreatureIconsHideAll()
       iwtb.overviewCreatureIconsHide(1)
     elseif iwtb.rlRaiderOverviewListFrame[3]:IsShown() then
       iwtb.rlRaiderOverviewListFrame[3]:Hide()
       iwtb.rlRaiderOverviewListFrame[2]:Show()
       iwtb.rlOverviewNextButton:Enable()
       iwtb.rlOverviewNextButton:Show()
+      iwtb.overviewCreatureIconsHideAll()
       iwtb.overviewCreatureIconsHide(2)
     end
   end)
@@ -2051,6 +2057,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
       iwtb.rlRaiderOverviewListFrame[2]:Show()
       iwtb.rlOverviewPrevButton:Enable()
       iwtb.rlOverviewPrevButton:Show()
+      iwtb.overviewCreatureIconsHideAll()
       iwtb.overviewCreatureIconsHide(2)
       print(rlOverviewContent2:GetNumChildren())
       -- check if there are 7 bosses and hide "next" if not. Not ideal as it's possibly to have 14 bosses only.
@@ -2062,6 +2069,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
       iwtb.rlRaiderOverviewListFrame[3]:Show()
       s:Disable()
       s:Hide()
+      iwtb.overviewCreatureIconsHideAll()
       iwtb.overviewCreatureIconsHide(3)
     end
   end)
