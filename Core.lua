@@ -2059,8 +2059,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
       iwtb.rlOverviewPrevButton:Show()
       iwtb.overviewCreatureIconsHideAll()
       iwtb.overviewCreatureIconsHide(2)
-      print(rlOverviewContent2:GetNumChildren())
-      -- check if there are 7 bosses and hide "next" if not. Not ideal as it's possibly to have 14 bosses only.
+      -- check if there are 7 bosses and hide "next" if not. TODO: Fix when moving between tiers; Ant to Trial will still show next etc.
       if rlOverviewContent2:GetNumChildren() < 8 then
         s:Hide()
       end
