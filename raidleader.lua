@@ -7,7 +7,7 @@ local roleTexCoords = {DAMAGER = {left = 0.3125, right = 0.609375, top = 0.32812
 local rlStatusContent = {} -- RL status lines 1-10
 
 -- Lovingly "inspired" by RSUM
-function FrameContainsPoint(frame, x, y)
+local function FrameContainsPoint(frame, x, y)
 	local left, bottom, width, height = frame:GetRect()
 	if x >= left then
 		if y >= bottom then
@@ -23,7 +23,7 @@ end
 
 -- search for mouseover frame which is actually overlapped by the dragged frame - does not work correctly for slots in same grp if > dragged. Anchor point problem? Position on drag changes GetRect?
 function iwtb.MemberFrameContainsPoint(x, y)
-	if FrameContainsPoint(rlRaiderListFrame, x, y) then
+	if FrameContainsPoint(iwtb.rlRaiderListFrame, x, y) then
 		for i=1,8 do
 			if FrameContainsPoint(iwtb.grpMemFrame[i], x, y) then
 				for member=1,5 do
@@ -38,7 +38,7 @@ function iwtb.MemberFrameContainsPoint(x, y)
 	return nil, nil
 end
 
-function slotIsEmpty(f)
+local function slotIsEmpty(f)
   if f:GetAttribute("raidid") >0 then return false else return true end
 end
 
@@ -99,7 +99,7 @@ function iwtb.slotDropDown_Menu(frame, level, menuList)
   end
 end
   
-function hasNote(name, tier, boss) -- compare the player name to the rl db to see if they have a note for the selected boss
+local function hasNote(name, tier, boss) -- compare the player name to the rl db to see if they have a note for the selected boss
   -- First check if the player is in rl db
   for tname, rldb in pairs(iwtb.rlProfileDB.profile.raiders) do
     if tname == name and rldb.raids ~= nil then
@@ -419,7 +419,7 @@ function iwtb.drawOverviewSlots(instid, bossid, c)
 end
 
 -- Add/draw Out of Raid slot for raider entry.
-function drawOoR(ooRraiders)
+local function drawOoR(ooRraiders)
   -- Find number of current slots
   local curSlots = iwtb.rlRaiderNotListFrame.rlOoRcontent:GetNumChildren()
   --local sloty = 0 -- This is the top padding
@@ -539,7 +539,7 @@ function drawOoR(ooRraiders)
   end
 end
 
-function redrawGroup(grp)
+local function redrawGroup(grp)
   if type(grp) == "number" then
     for n=1, 5 do
       local slotx = (iwtb.GUIgrpSlotSizeX * (n -1)) + (5 * n-1)
@@ -569,7 +569,7 @@ function redrawGroup(grp)
   end
 end
 
-function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss - expac depreciated
+local function hasDesire(name, expac, tier, boss) -- compare the player name to the rl db to see if they have a desire for the selected boss - expac depreciated
   -- First check if the player is in rl db
   for tname, rldb in pairs(iwtb.rlProfileDB.profile.raiders) do
     if tname == name and rldb.raids ~= nil then
@@ -693,7 +693,7 @@ function iwtb.setStatusText(f, text)
   end
 end
 
-function removeRaiderData(f, name)
+local function removeRaiderData(f, name)
   --raidLeaderDB.char.raiders[name] = nil
   wipe(iwtb.rlProfileDB.profile.raiders[name])
   iwtb.setStatusText("raidleader", L["Removed data - "] .. name)

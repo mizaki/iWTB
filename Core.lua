@@ -23,7 +23,7 @@ local frame
 --local rlTab -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
-local rlRaiderListFrame -- main frame listing raiders spots
+iwtb.rlRaiderListFrame = {} -- main frame listing raiders spots
 --iwtb.rlRaiderOverviewFrame -- main frame listing raid leaders overview
 --local rlRaiderOverviewFrameSlots = {} -- raid leader overview slots
 --local rlRaiderOverviewFrameColumns = {} -- overview columns
@@ -1587,13 +1587,13 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     preferredIndex = 3,  -- avoid some UI taint, see http://www.wowace.com/announcements/how-to-avoid-some-ui-taint/
   }
 
-  -- rlRaiderListFrame
-  rlRaiderListFrame = CreateFrame("Frame", "iwtbrlraiderlistframe", iwtb.rlTab)
-  rlRaiderListFrame:SetWidth(GUItabWindowSizeX -20)
-  rlRaiderListFrame:SetHeight(GUItabWindowSizeY -20)
-  rlRaiderListFrame:SetPoint("CENTER", 0, 0)
-  texture = rlRaiderListFrame:CreateTexture("iwtbrlraiderlistframetex")
-  texture:SetAllPoints(rlRaiderListFrame)
+  -- iwtb.rlRaiderListFrame
+  iwtb.rlRaiderListFrame = CreateFrame("Frame", "iwtbrlraiderlistframe", iwtb.rlTab)
+  iwtb.rlRaiderListFrame:SetWidth(GUItabWindowSizeX -20)
+  iwtb.rlRaiderListFrame:SetHeight(GUItabWindowSizeY -20)
+  iwtb.rlRaiderListFrame:SetPoint("CENTER", 0, 0)
+  texture = iwtb.rlRaiderListFrame:CreateTexture("iwtbrlraiderlistframetex")
+  texture:SetAllPoints(iwtb.rlRaiderListFrame)
   texture:SetColorTexture(0.1,0.1,0.1,0.5)
   
   -- iwtb.rlRaiderOverviewFrame
@@ -1611,7 +1611,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     local x = 20
     local y = (GUIgrpSizeY + 5) * i
     
-    iwtb.grpMemFrame[i] = CreateFrame("Frame", "iwtbgrp" .. i, rlRaiderListFrame)
+    iwtb.grpMemFrame[i] = CreateFrame("Frame", "iwtbgrp" .. i, iwtb.rlRaiderListFrame)
     iwtb.grpMemFrame[i]:SetWidth(GUIgrpSizeX)
     iwtb.grpMemFrame[i]:SetHeight(GUIgrpSizeY)
     iwtb.grpMemFrame[i]:SetPoint("TOPLEFT",x, -y)
@@ -1748,7 +1748,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     end
   end
   
-  local rlResetDBButton = CreateFrame("Button", "iwtbrlresetdbbutton", rlRaiderListFrame, "UIPanelButtonTemplate")
+  local rlResetDBButton = CreateFrame("Button", "iwtbrlresetdbbutton", iwtb.rlRaiderListFrame, "UIPanelButtonTemplate")
   rlResetDBButton:SetWidth(GUItabButtonSizeX)
   rlResetDBButton:SetHeight(GUItabButtonSizeY)
   rlResetDBButton:SetText(L["Reset DB"])
@@ -1762,7 +1762,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   end)
   
   -- Raid Leader test button
-  local rlTestButton = CreateFrame("Button", "iwtbrltestbutton", rlRaiderListFrame, "UIPanelButtonTemplate")
+  local rlTestButton = CreateFrame("Button", "iwtbrltestbutton", iwtb.rlRaiderListFrame, "UIPanelButtonTemplate")
   rlTestButton:SetWidth(GUItabButtonSizeX)
   rlTestButton:SetHeight(GUItabButtonSizeY)
   rlTestButton:SetText("Refresh")
@@ -1776,7 +1776,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   end)
   
   -- Raid Leader Overview button
-  local rlOverviewButton = CreateFrame("Button", "iwtbrloverviewbutton", rlRaiderListFrame, "UIPanelButtonTemplate")
+  local rlOverviewButton = CreateFrame("Button", "iwtbrloverviewbutton", iwtb.rlRaiderListFrame, "UIPanelButtonTemplate")
   rlOverviewButton:SetWidth(GUItabButtonSizeX)
   rlOverviewButton:SetHeight(GUItabButtonSizeY)
   rlOverviewButton:SetText(L["Overview"])
@@ -1784,7 +1784,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   rlOverviewButton:Enable()
   rlOverviewButton:RegisterForClicks("LeftButtonUp")
   rlOverviewButton:SetScript("OnClick", function(s)
-    rlRaiderListFrame:Hide()
+    iwtb.rlRaiderListFrame:Hide()
     bossesRLButton:Hide()
     iwtb.drawOverviewColumnsHideAll()
     iwtb.drawOverviewColumns(iwtb.rlSelectedTier.instid)
@@ -1805,7 +1805,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   rlOverviewButton:RegisterForClicks("LeftButtonUp")
   rlOverviewButton:SetScript("OnClick", function(s)
     iwtb.rlRaiderOverviewFrame:Hide()
-    rlRaiderListFrame:Show()
+    iwtb.rlRaiderListFrame:Show()
     bossesRLButton:Show()
   end)
   
@@ -1823,7 +1823,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   end)
   
   -- Raid leader close button
-  local rlCloseButton = CreateFrame("Button", "iwtbrlcloseButton", rlRaiderListFrame, "UIPanelButtonTemplate")
+  local rlCloseButton = CreateFrame("Button", "iwtbrlcloseButton", iwtb.rlRaiderListFrame, "UIPanelButtonTemplate")
   rlCloseButton:SetWidth(GUItabButtonSizeX)
   rlCloseButton:SetHeight(GUItabButtonSizeY)
   rlCloseButton:SetText(L["Close"])
@@ -2076,10 +2076,10 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   ----------------------------------------
   -- Out of raid scroll list for desire --
   ----------------------------------------
-  iwtb.rlRaiderNotListFrame = CreateFrame("ScrollFrame", "iwtbrloorframe", rlRaiderListFrame) 
-  iwtb.rlRaiderNotListFrame:SetSize((iwtb.GUIgrpSlotSizeX +10), (rlRaiderListFrame:GetHeight() -160))
-  iwtb.rlRaiderNotListFrame:SetPoint("TOP", rlRaiderListFrame, 0, -55)
-  iwtb.rlRaiderNotListFrame:SetPoint("BOTTOMRIGHT", rlRaiderListFrame, -30, 20)
+  iwtb.rlRaiderNotListFrame = CreateFrame("ScrollFrame", "iwtbrloorframe", iwtb.rlRaiderListFrame) 
+  iwtb.rlRaiderNotListFrame:SetSize((iwtb.GUIgrpSlotSizeX +10), (iwtb.rlRaiderListFrame:GetHeight() -160))
+  iwtb.rlRaiderNotListFrame:SetPoint("TOP", iwtb.rlRaiderListFrame, 0, -55)
+  iwtb.rlRaiderNotListFrame:SetPoint("BOTTOMRIGHT", iwtb.rlRaiderListFrame, -30, 20)
   iwtb.rlRaiderNotListFrame:SetClipsChildren(true)
   iwtb.rlRaiderNotListFrame:SetScript("OnMouseWheel", function(s,v)
     local curV = iwtb.rlRaiderNotListFrame.rlOoRscrollbar:GetValue()
