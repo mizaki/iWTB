@@ -62,6 +62,13 @@ function iwtb.isGuildMember(name)
   return false
 end
 
+local function removeRaiderData(f, name)
+  --raidLeaderDB.char.raiders[name] = nil
+  wipe(iwtb.rlProfileDB.profile.raiders[name])
+  iwtb.setStatusText("raidleader", L["Removed data - "] .. name)
+  iwtb.raidUpdate()
+end
+
 -- Right click menu for raid/OoR slots
 function iwtb.slotDropDown_Menu(frame, level, menuList)
   local fname = string.match(frame:GetName(), "%a+")
@@ -672,7 +679,6 @@ end
 function iwtb.setStatusText(f, text)
   local curTop = iwtb.rlTab.rlStatusPanel.text:GetText()
   local function churnContent(statuses)
-    iwtb.print_table(statuses)
     -- insert at top
     table.insert(statuses, 1, curTop)
     -- remove bottom
@@ -693,9 +699,3 @@ function iwtb.setStatusText(f, text)
   end
 end
 
-local function removeRaiderData(f, name)
-  --raidLeaderDB.char.raiders[name] = nil
-  wipe(iwtb.rlProfileDB.profile.raiders[name])
-  iwtb.setStatusText("raidleader", L["Removed data - "] .. name)
-  iwtb.raidUpdate()
-end
