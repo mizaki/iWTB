@@ -959,24 +959,38 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
             bossFrame[idofboss].addNote:Enable()
             bossFrame[idofboss].addNote:RegisterForClicks("LeftButtonUp")
             bossFrame[idofboss].addNote:SetScript("OnClick", function(s)
+              local function saveNote(s, text)
+                if s:GetText() ~= "" then
+                  dbBossValidate(raiderSelectedTier.instid, idofboss)
+                  raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
+                  bossFrame[idofboss].addNote:SetText(L["Edit note"])
+                end
+                s:Hide()
+              end
+              
               local editbox = CreateFrame("EditBox", "iwtbaddnoteedit", bossFrame[idofboss].addNote, "InputBoxTemplate")
               editbox:SetSize(250, 15)
-              editbox:SetPoint("BOTTOMRIGHT", 25, 0)
+              editbox:SetPoint("BOTTOMRIGHT", 5, 0)
               editbox:HighlightText()
+              editbox:SetFocus()
               
-              --[[local saveButton = CreateFrame("Button", "iwtbraidersavebutton", editbox, "UIPanelButtonTemplate")
+              local saveButton = CreateFrame("Button", "iwtbraidersavebutton", editbox, "UIPanelButtonTemplate")
               saveButton:SetSize(50, 15)
               saveButton:SetPoint("TOPRIGHT", 0, 0)
               saveButton:SetText(L["Save"])
               saveButton:RegisterForClicks("LeftButtonUp")
               saveButton:SetScript("OnClick", function(s)
+                saveNote(s:GetParent())
+              end)
               
-              end)]]
+              editbox:SetScript("OnEditFocusLost", function(s)
+                s:Hide()
+              end)
               
               if bossHasNote then
                 local delButton = CreateFrame("Button", "iwtbraiderdelbutton", editbox, "UIPanelButtonTemplate")
                 delButton:SetSize(50, 15)
-                delButton:SetPoint("TOPRIGHT", 0, 0)
+                delButton:SetPoint("TOPRIGHT", -50, 0)
                 delButton:SetText(L["Delete"])
                 delButton:Enable()
                 delButton:RegisterForClicks("LeftButtonUp")
@@ -993,22 +1007,24 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
               end
               editbox:SetScript("OnKeyUp", function(s, key)
                         if key == "ESCAPE" or key == "ENTER" then
-                          if s:GetText() ~= "" then
+                          saveNote(s)
+                          --[[if s:GetText() ~= "" then
                             dbBossValidate(raiderSelectedTier.instid, idofboss)
                             raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                             bossFrame[idofboss].addNote:SetText(L["Edit note"])
                           end
-                          s:Hide()
+                          s:Hide()]]
                         end
                       end)
               editbox:SetScript("OnEnterPressed", function(s)
-                if s:GetText() ~= "" then
+                saveNote(s)
+                --[[if s:GetText() ~= "" then
                   dbBossValidate(raiderSelectedTier.instid, idofboss)
                   raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                   bossFrame[idofboss].addNote:SetText(L["Edit note"])
                 end
                 s:ClearFocus()
-                s:Hide()
+                s:Hide()]]
               end)
               bossFrame[idofboss].addNote.editbox = editbox
             end)
