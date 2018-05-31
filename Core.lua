@@ -325,11 +325,54 @@ local function dbSchemaCheck(level, expac)
   end
 end
 
-local function dbBossCheck(instid, bossid)
+local function dbBossValidate(instid, bossid)
   if raiderDB.char.raids[instid] == nil then raiderDB.char.raids[instid] = {} end
   if raiderDB.char.raids[instid][bossid] == nil then raiderDB.char.raids[instid][bossid] = {} end
 end
 
+local function dbCheckExists(instid, bossid, desire, note)
+  if instid and bossid and desire and note then
+    if raiderDB.char.raids[instid]
+    and raiderDB.char.raids[instid][bossid]
+    and raiderDB.char.raids[instid][bossid][desireid]
+    and raiderDB.char.raids[instid][bossid][note]
+    and raiderDB.char.raids[instid][bossid][note] ~= "" then
+      return true
+    else
+      return false
+    end
+  elseif instid and bossid and desire then
+    if raiderDB.char.raids[instid]
+    and raiderDB.char.raids[instid][bossid]
+    and raiderDB.char.raids[instid][bossid][desireid] then
+      return true
+    else
+      return false
+    end
+  elseif instid and bossid and note then
+    if raiderDB.char.raids[instid]
+    and raiderDB.char.raids[instid][bossid]
+    and raiderDB.char.raids[instid][bossid].note
+    and raiderDB.char.raids[instid][bossid][note] ~= "" then
+      return true
+    else
+      return false
+    end
+  elseif instid and bossid then
+    if raiderDB.char.raids[instid]
+    and raiderDB.char.raids[instid][bossid] then
+      return true
+    else
+      return false
+    end
+  elseif instid then
+    if raiderDB.char.raids[instid] then
+      return true
+    else
+      return false
+    end
+  end
+end
 ----------------------------------------------------------------
 ----------------------------------------------------------------
 ----------------------------------------------------------------
@@ -390,6 +433,7 @@ end
 function iwtb.hideKillPopup()
   bossKillPopup:Hide()
 end
+
 -- For minimap icon
 local iwtbLDB = LibStub("LibDataBroker-1.1"):NewDataObject("iwtb_icon", {
 	type = "data source",
@@ -761,7 +805,7 @@ function iwtb:OnEnable()
     -- arg1 = desire id, arg2 = boss id
     -- Desirability of the boss has changed: write to DB, change serialised string for comms, (if in the raid of the selected tier, resend to raid leader (and promoted?)?)
     --old data layout - raiderDB.char.expac[raiderSelectedTier.expacid].tier[raiderSelectedTier.instid].bosses[arg2] = arg1
-    dbBossCheck(raiderSelectedTier.instid, arg2)
+    dbBossValidate(raiderSelectedTier.instid, arg2)
     raiderDB.char.raids[raiderSelectedTier.instid][arg2].desireid = arg1
     -- Is it too much overhead to do this each time? Have a button instead to serialises and send? Relies on raider to push a button and we know how hard they find that already!
     --raiderBossesStr = Serializer:Serialize(raiderDB.char.bosses)
@@ -916,18 +960,41 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
             bossFrame[idofboss].addNote:RegisterForClicks("LeftButtonUp")
             bossFrame[idofboss].addNote:SetScript("OnClick", function(s)
               local editbox = CreateFrame("EditBox", "iwtbaddnoteedit", bossFrame[idofboss].addNote, "InputBoxTemplate")
-              editbox:SetSize(300, 15)
-              editbox:SetPoint("BOTTOMRIGHT", 0, 0)
+              editbox:SetSize(250, 15)
+              editbox:SetPoint("BOTTOMRIGHT", 25, 0)
               editbox:HighlightText()
               
-              dbBossCheck(raiderSelectedTier.instid, idofboss)
+              --[[local saveButton = CreateFrame("Button", "iwtbraidersavebutton", editbox, "UIPanelButtonTemplate")
+              saveButton:SetSize(50, 15)
+              saveButton:SetPoint("TOPRIGHT", 0, 0)
+              saveButton:SetText(L["Save"])
+              saveButton:RegisterForClicks("LeftButtonUp")
+              saveButton:SetScript("OnClick", function(s)
+              
+              end)]]
+              
+              if bossHasNote then
+                local delButton = CreateFrame("Button", "iwtbraiderdelbutton", editbox, "UIPanelButtonTemplate")
+                delButton:SetSize(50, 15)
+                delButton:SetPoint("TOPRIGHT", 0, 0)
+                delButton:SetText(L["Delete"])
+                delButton:Enable()
+                delButton:RegisterForClicks("LeftButtonUp")
+                delButton:SetScript("OnClick", function(s)
+                  raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = ""
+                  editbox:Hide()
+                  bossFrame[idofboss].addNote:SetText(L["Add note"])
+                end)
+              end
+              
+              dbBossValidate(raiderSelectedTier.instid, idofboss)
               if raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note then
                 editbox:SetText(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note)
               end
               editbox:SetScript("OnKeyUp", function(s, key)
                         if key == "ESCAPE" or key == "ENTER" then
                           if s:GetText() ~= "" then
-                            dbBossCheck(raiderSelectedTier.instid, idofboss)
+                            dbBossValidate(raiderSelectedTier.instid, idofboss)
                             raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                             bossFrame[idofboss].addNote:SetText(L["Edit note"])
                           end
@@ -936,7 +1003,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
                       end)
               editbox:SetScript("OnEnterPressed", function(s)
                 if s:GetText() ~= "" then
-                  dbBossCheck(raiderSelectedTier.instid, idofboss)
+                  dbBossValidate(raiderSelectedTier.instid, idofboss)
                   raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                   bossFrame[idofboss].addNote:SetText(L["Edit note"])
                 end
@@ -946,8 +1013,9 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
               bossFrame[idofboss].addNote.editbox = editbox
             end)
             bossFrame[idofboss].addNote:SetScript("OnEnter", function(s)
-                                GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
-                                if bossHasNote then
+                                
+                                if dbCheckExists(raiderSelectedTier.instid, idofboss, nil, true) then
+                                  GameTooltip:SetOwner(s, "ANCHOR_CURSOR")
                                   GameTooltip:AddLine(raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note)
                                   GameTooltip:Show()
                                 end

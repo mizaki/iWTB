@@ -33,6 +33,8 @@ L["Boss killed!"] = true
 -- Buttons
 L["Add note"] = true
 L["Edit note"] = true
+L["Save"] = true
+L["Delete"] = true
 L["Close"] = true
 L["Tutorial"] = true
 L["Options"] = true

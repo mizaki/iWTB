@@ -16,10 +16,10 @@ local function printTable(table)
 end
 
 -- Comms channel prefixes
-local XFER_HASH = "IWTB_XFER_HASH"
-local REQUEST_DATA = "IWTB_REQ_DATA"
+local XFER_HASH = "IWTB_XFER_HASH" -- Send hash of raider boss list
+local REQUEST_DATA = "IWTB_REQ_DATA" -- Request data from raider
 --local UPDATE_HASH = "IWTB_UPDATE_HASH"
-local XFER_DATA = "IWTB_XFER_DATA"
+local XFER_DATA = "IWTB_XFER_DATA" -- Send raider data
 
 iwtb.hashData = function (data)
   local serData = Serializer:Serialize(data)
