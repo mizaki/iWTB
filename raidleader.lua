@@ -356,7 +356,7 @@ function iwtb.drawOverviewSlots(instid, bossid, c)
     texture:SetHeight(16)
     texture:SetPoint("TOPLEFT", 0, 0)
     texture:SetDrawLayer("ARTWORK",7)
-    if notetxt then
+    if notetxt and notetxt ~= "" then
       texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
       rlRaiderOverviewFrameSlots[c][n].note:SetAttribute("hasNote", true)
       rlRaiderOverviewFrameSlots[c][n].note:SetAttribute("noteTxt", notetxt)
@@ -391,13 +391,17 @@ function iwtb.drawOverviewSlots(instid, bossid, c)
               if tonumber(bossident) == bossid then
                 if i > curSlots then
                   -- Add another slot
-                  createOverviewSlot(i, name, bosstbl.desireid, bosstbl.note)
+                  if not bosstbl.desireid and bosstbl.note and bosstbl.note == "" then
+                    -- Don't show slot
+                  else
+                    createOverviewSlot(i, name, bosstbl.desireid, bosstbl.note)
+                  end
                 else
                   -- Reuse slot
                   rlRaiderOverviewFrameSlots[c][i].nameText:SetText(name)
                   rlRaiderOverviewFrameSlots[c][i].desireTag.text:SetText(iwtb.desire[bosstbl.desireid] or L["Unknown desire"])
                   
-                  if bosstbl.note then
+                  if bosstbl.note and bosstbl.note ~= "" then
                     rlRaiderOverviewFrameSlots[c][i].note.texture:SetTexture("Interface\\Buttons\\UI-GuildButton-PublicNote-Up")
                     rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("hasNote", true)
                     rlRaiderOverviewFrameSlots[c][i].note:SetAttribute("noteTxt", bosstbl.note)
