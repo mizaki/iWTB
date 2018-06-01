@@ -97,6 +97,13 @@ function iwtb.slotDropDown_Menu(frame, level, menuList)
       info.arg1 = name
       info.notCheckable = true
       L_UIDropDownMenu_AddButton(info)
+      
+      info = L_UIDropDownMenu_CreateInfo()
+      info.func = function(s, arg1, arg2, checked) iwtb.sendData("rdata", "", name) end
+      info.text = L["Request data"]
+      info.arg1 = name
+      info.notCheckable = true
+      L_UIDropDownMenu_AddButton(info)
     end
     
     info = L_UIDropDownMenu_CreateInfo()

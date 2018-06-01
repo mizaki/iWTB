@@ -23,12 +23,15 @@ L["Minor"] = true
 L["Off spec"] = true
 L["No need"] = true
 L["No data"] = true
-L["Remove data"] = true
-L["Remove"] = true
-L["Cancel"] = true
 L["Out of raid players"] = true
 L["Raider Overview"] = true
 L["Boss killed!"] = true
+
+-- Context menus
+L["Remove data"] = true
+L["Remove"] = true
+L["Cancel"] = true
+L["Request data"] = true
 
 -- Buttons
 L["Add note"] = true
@@ -80,6 +83,7 @@ L["Use the raid leader data from another profile\/character"] = true
 L["Received update - "] = true
 L["Removed data - "] = true
 L["Sent data to raid group"] = true
+L["Sent data to "] = true
 L["Need to be in a raid group"] = true
 L["Ignored non-guild member data - "] = true
 L["Ignored data. Change in options to receive data"] = true

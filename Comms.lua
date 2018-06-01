@@ -7,18 +7,10 @@ local L = iwtb.L
 
 local commSpec = 2 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
 
-local function printTable(table)
-  if type(table) == "table" then
-    for key, value in pairs(table) do
-        print("k: " .. key .. " v: " .. value)
-    end
-  end
-end
-
 -- Comms channel prefixes
 local XFER_HASH = "IWTB_XFER_HASH" -- Send hash of raider boss list
 local REQUEST_DATA = "IWTB_REQ_DATA" -- Request data from raider
---local UPDATE_HASH = "IWTB_UPDATE_HASH"
+local REQUEST_HASH = "IWTB_REQ_HASH" -- Request hash from raider
 local XFER_DATA = "IWTB_XFER_DATA" -- Send raider data
 
 iwtb.hashData = function (data)
@@ -117,11 +109,6 @@ end
 ------------------------------------
 
 local function dbRLRaiderCheck(raider, expac, tier)
-  -- Depreciated (most likely removed for release)
-  --[[if iwtb.raidLeaderDB.char.raiders[raider] == nil then
-    iwtb.raidLeaderDB.char.raiders[raider] = {}
-    iwtb.raidLeaderDB.char.raiders[raider].bossListHash = ""
-  end]]
   if iwtb.rlProfileDB.profile.raiders[raider] == nil then
     iwtb.rlProfileDB.profile.raiders[raider] = {}
     iwtb.rlProfileDB.profile.raiders[raider].bossListHash = ""
@@ -158,16 +145,8 @@ end
 
 -- TODO
 local function requestData(prefix, text, distribution, sender)
-  local success, data = iwtb.decodeData(text)
-  if data.commSpec == nil or data.commSpec < commSpec then
-    print("Old comm spec: " .. sender)
-    return
-  elseif data.commSpec > commSpec then
-    print("Newer comm spec: " .. sender)
-    return
-  else
-    --data.commSpec = nil
-  end
+    iwtb.sendData("udata", iwtb.raiderDB.char, sender)
+    iwtb.setStatusText("raider", L["Sent data to "] .. sender)
 end
 
 -- TODO: RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
