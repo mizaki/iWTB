@@ -1657,13 +1657,12 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   
   -- Raid Leader reset DB button
   StaticPopupDialogs["IWTB_ResetRaidLeaderDB"] = {
-    text = L["Remove ALL raiders desire data?"],
+    text = L["Remove ALL raiders desire data for profile %s?"],
     button1 = "Yes",
     button2 = "No",
     OnAccept = function()
         rlProfileDB:ResetDB()
         if raidLeaderDB then raidLeaderDB:ResetDB() end
-        
     end,
     timeout = 0,
     whileDead = true,
@@ -1842,7 +1841,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   rlResetDBButton:Enable()
   rlResetDBButton:RegisterForClicks("LeftButtonUp")
   rlResetDBButton:SetScript("OnClick", function(s)
-    StaticPopup_Show("IWTB_ResetRaidLeaderDB")
+    StaticPopup_Show("IWTB_ResetRaidLeaderDB", rlProfileDB:GetCurrentProfile())
   end)
   
   -- Raid Leader test button

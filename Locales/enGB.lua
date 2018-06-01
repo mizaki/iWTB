@@ -89,7 +89,7 @@ L["Updated raidleader DB"] = true
 
 -- Confirmation boxes
 L["Remove selected desire from ALL bosses?"] = true
-L["Remove ALL raiders desire data?"] = true
+L["Remove ALL raiders desire data for profile %s?"] = true
 
 -- Tutorial
 L["How to use iWTB - I Want That Boss!"] = true
