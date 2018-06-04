@@ -1,6 +1,7 @@
 local AceTimer = LibStub("AceTimer-3.0")
 local AceComm = LibStub("AceComm-3.0")
 local Serializer = LibStub("AceSerializer-3.0")
+iwtb.Serializer = Serializer
 local Compressor = LibStub("LibCompress")
 local Encoder = Compressor:GetAddonEncodeTable()
 local L = iwtb.L
@@ -14,7 +15,36 @@ local REQUEST_HASH = "IWTB_REQ_HASH" -- Request hash from raider
 local XFER_DATA = "IWTB_XFER_DATA" -- Send raider data
 
 iwtb.hashData = function (data)
-  local serData = Serializer:Serialize(data)
+  local outData = {}
+  
+  -- From https://www.lua.org/pil/19.3.html
+  local function pairsByKeys (t, f)
+    local a = {}
+    for n in pairs(t) do table.insert(a, n) end
+    table.sort(a, f)
+    local i = 0      -- iterator variable
+    local iter = function ()   -- iterator function
+      i = i + 1
+      if a[i] == nil then return nil
+      else return a[i], t[a[i]]
+      end
+    end
+    return iter
+  end
+  
+  -- Need to order data for a reliable hash. As table retrieval is arbitrary convert all _boss_ wants to an array.
+  local function orderData(inData) -- expects [instid][bossid]([desireid],[note])
+    for instid,inst_tbl in pairs(inData) do
+      for bossid,boss_tbl in pairsByKeys(inst_tbl) do
+        table.insert(outData,{[bossid] = {boss_tbl}})
+        -- Need to array desireid and note? Appears not so far.
+      end
+    end
+  end
+  
+  orderData(data)
+  --iwtb.print_table(outData)
+  local serData = Serializer:Serialize(outData)
   local hash = Compressor:fcs32init()
   hash = Compressor:fcs32update(hash, serData)
   hash = Compressor:fcs32final(hash)
@@ -78,12 +108,13 @@ end
 -- Send data
 iwtb.sendData = function (prefix, data, target) 
   --data.commSpec = commSpec
+  print("target: ",target)
   local odata = data
   local sType
   
   --if prefix == "uhash" then
     --sType = UPDATE_HASH
-  if prefix == "rhash" then
+  if prefix == "shash" then
     sType = XFER_HASH
   elseif prefix == "udata" then
     sType = XFER_DATA
@@ -99,9 +130,17 @@ iwtb.sendData = function (prefix, data, target)
   elseif target == "guild" then
     AceComm:SendCommMessage(sType, odata, "GUILD")
   elseif target ~= "" then -- Presume target is char name
+    --print("sent /w to: ", target, ". Request type: ", prefix, ". Data: ", odata)
+    --print("sent /w to: ", target, ". Request type: ", prefix)
     AceComm:SendCommMessage(sType, odata, "WHISPER", target)
   end
   
+end
+
+-- Send hash to /raid
+iwtb.autoSendHash = function()
+  print("auto-sending hash")
+  iwtb.sendData("shash", iwtb.raiderDB.char.bossListHash, "raid")
 end
 
 ------------------------------------
@@ -135,7 +174,7 @@ local function xferData(prefix, text, distribution, sender)
       --iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
       iwtb.rlProfileDB.profile.raiders[sender].raids = data.raids
       iwtb.rlProfileDB.profile.raiders[sender].bossListHash = iwtb.hashData(data.raids)
-      --iwtb.raidLeaderDB.char.raiders[sender].bossListHash = iwtb.hashData(data.expac)
+      print("rl-hash: ", iwtb.rlProfileDB.profile.raiders[sender].bossListHash)
       iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
     else
       iwtb.setStatusText("raidleader", L["Ignored non-guild member data - "] .. sender)
@@ -143,24 +182,22 @@ local function xferData(prefix, text, distribution, sender)
   end
 end
 
--- TODO
 local function requestData(prefix, text, distribution, sender)
+    --print("received data request from: ", sender)
+    --print("raider-hash: ", iwtb.hashData(iwtb.raiderDB.char.raids))
     iwtb.sendData("udata", iwtb.raiderDB.char, sender)
     iwtb.setStatusText("raider", L["Sent data to "] .. sender)
 end
 
--- TODO: RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data.
+-- TODO: RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data?
 local function xferHash(prefix, text, distribution, sender)
   dbRLRaiderCheck(sender)
-  --print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.raidLeaderDB.char.raiders[sender].bossListHash))
+  print("raider-type: ", type(text), "rl-type: ", type(iwtb.rlProfileDB.profile.raiders[sender].bossListHash))
+  print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.rlProfileDB.profile.raiders[sender].bossListHash))
   
-  -- Temp statement for testing
+  -- Compare hashes. If hash mismatch, request data from raider.
   if text ~= iwtb.rlProfileDB.profile.raiders[sender].bossListHash then
-  -- Final statement if RL sends (may change)
-  --if text ~= iwtb.raiderDB.char.bossListHash then
-    -- Send current boss list
-    --print("Boss list hash mismatch - sending updated data")
-    iwtb.sendData("udata", iwtb.raiderDB.char, sender)
+    iwtb.sendData("rdata", "", sender)
   end
   
 end

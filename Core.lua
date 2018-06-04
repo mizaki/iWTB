@@ -815,6 +815,7 @@ function iwtb:OnEnable()
     
     -- Update hash
     raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids) -- Do we want to hash here? Better to do it before sending or on request?
+    print("raider-hash: ", raiderDB.char.bossListHash)
   end
     
   -- Fill menu with desirability list
@@ -1008,23 +1009,10 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
               editbox:SetScript("OnKeyUp", function(s, key)
                         if key == "ESCAPE" or key == "ENTER" then
                           saveNote(s)
-                          --[[if s:GetText() ~= "" then
-                            dbBossValidate(raiderSelectedTier.instid, idofboss)
-                            raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
-                            bossFrame[idofboss].addNote:SetText(L["Edit note"])
-                          end
-                          s:Hide()]]
                         end
                       end)
               editbox:SetScript("OnEnterPressed", function(s)
                 saveNote(s)
-                --[[if s:GetText() ~= "" then
-                  dbBossValidate(raiderSelectedTier.instid, idofboss)
-                  raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
-                  bossFrame[idofboss].addNote:SetText(L["Edit note"])
-                end
-                s:ClearFocus()
-                s:Hide()]]
               end)
               bossFrame[idofboss].addNote.editbox = editbox
             end)
@@ -1274,6 +1262,14 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     local _, instType, diffId = GetInstanceInfo()
     if instType == "raid" and db.char.showPopup and diffId == 16 then
       iwtb:RegisterEvent("BOSS_KILL", bossKilled)
+    end
+  end
+  
+  local function joinGroup(e, arg1,arg2,arg3,arg4,arg5)
+    print("e: ",e, " arg1: ",arg1, " arg2: ",arg2, " arg3: ",arg3, " arg4: ",arg4, " arg5: ",arg5)
+    print("UnitInRaid: ", UnitInRaid("player"))
+    if UnitInRaid("player") == 40 then
+      print("player in raid")
     end
   end
   
@@ -1527,14 +1523,11 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   raiderTestButton:Enable()
   raiderTestButton:RegisterForClicks("LeftButtonUp")
   raiderTestButton:SetScript("OnClick", function(s)
-    --iwtb.setStatusText("raider", "Testing")
-    bossKilled("BOSS_KILL", 2070, "Antoran High Command") -- "Felhounds of Sargeras", 1712, 1987 - engageId = 2074
-    --print("autohideTime: ",db.char.autohideKillTime)
-    --bossKillPopup:Show()
+    iwtb.autoSendHash()
   end)
   --raiderTestButton:SetScript("OnEnter", function(s) print("enter"); s.texture:SetTexture(GlowBorderTemplate) end)
   --raiderTestButton:SetScript("OnLeave", function(s) s.texture:SetTexture(texture) end)
-  raiderTestButton:Hide()
+  --raiderTestButton:Hide()
   
   -- Raider close button
   raiderFrames.raiderCloseButton = CreateFrame("Button", "iwtbraiderCloseButton", iwtb.raiderTab, "UIPanelButtonTemplate")
@@ -2481,6 +2474,8 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   iwtb:RegisterEvent("GROUP_ROSTER_UPDATE", iwtb.raidUpdate)
   iwtb:RegisterEvent("RAID_INSTANCE_WELCOME", enterInstance)
   iwtb:RegisterEvent("GROUP_LEFT", leftGroup)
+  iwtb:RegisterEvent("GROUP_JOINED", joinGroup)
+  iwtb:RegisterEvent("PARTY_CONVERTED_TO_RAID", joinGroup)
   iwtb:RegisterEvent("PLAYER_ENTERING_WORLD", playerEnteringWorld)
 
 end
