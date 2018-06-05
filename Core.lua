@@ -1266,15 +1266,19 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   end
   
   local function joinGroup(e, arg1,arg2,arg3,arg4,arg5)
-    print("e: ",e, " arg1: ",arg1, " arg2: ",arg2, " arg3: ",arg3, " arg4: ",arg4, " arg5: ",arg5)
-    print("UnitInRaid: ", UnitInRaid("player"))
-    if UnitInRaid("player") == 40 then
+    if IsInRaid() then
       print("player in raid")
+      -- Random delay between 10-30 secs to send hash to /raid
+      if raiderDB.char.bossListHash and raiderDB.char.bossListHash ~= "" and not iwtb.hashSentToRaid then
+        print("Auto send hash to raid in 10-30 secs")
+        self:ScheduleTimer("autoSendHash", math.random(10,30))
+      end
     end
   end
   
   local function leftGroup()
     iwtb:UnregisterEvent("BOSS_KILL")
+    iwtb.hashSentToRaid = false
   end
   
   local function playerEnteringWorld()
@@ -2475,7 +2479,6 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   iwtb:RegisterEvent("RAID_INSTANCE_WELCOME", enterInstance)
   iwtb:RegisterEvent("GROUP_LEFT", leftGroup)
   iwtb:RegisterEvent("GROUP_JOINED", joinGroup)
-  iwtb:RegisterEvent("PARTY_CONVERTED_TO_RAID", joinGroup)
   iwtb:RegisterEvent("PLAYER_ENTERING_WORLD", playerEnteringWorld)
 
 end

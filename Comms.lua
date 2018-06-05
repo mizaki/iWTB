@@ -6,6 +6,8 @@ local Compressor = LibStub("LibCompress")
 local Encoder = Compressor:GetAddonEncodeTable()
 local L = iwtb.L
 
+iwtb.hashSentToRaid = false -- Check this when joining a raid. Once hash has been sent, set to true. Set to false on party left.
+
 local commSpec = 2 -- communication spec, to be changed with data layout revisions that will effect the comms channel data.
 
 -- Comms channel prefixes
@@ -141,6 +143,7 @@ end
 iwtb.autoSendHash = function()
   print("auto-sending hash")
   iwtb.sendData("shash", iwtb.raiderDB.char.bossListHash, "raid")
+  iwtb.hashSentToRaid = true
 end
 
 ------------------------------------
