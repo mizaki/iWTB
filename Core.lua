@@ -965,6 +965,8 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
                   dbBossValidate(raiderSelectedTier.instid, idofboss)
                   raiderDB.char.raids[raiderSelectedTier.instid][idofboss].note = s:GetText()
                   bossFrame[idofboss].addNote:SetText(L["Edit note"])
+                  -- Update hash
+                  raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids)
                 end
                 s:Hide()
               end
