@@ -489,6 +489,7 @@ function iwtb:OnInitialize()
         syncGuildRank = {},
         showTutorial = true,
         showPopup = true,
+        autoSendHash = true,
         autohideKillpopup = true,
         autohideKillTime = 60,
         killPopup = {
@@ -592,6 +593,21 @@ function iwtb:OnInitialize()
                 end 
                 end,              
         get = function(info) return db.char.ignoreAll end
+      },
+      autoSendHash = {
+        name = L["Auto send on join"],
+        order = 12,
+        desc = L["Automatically send desires on raid join"],
+        width = "double",
+        type = "toggle",
+        set = function(info,val)
+                if val then 
+                  db.char.autoSendHash = true
+                else 
+                  db.char.autoSendHash = false
+                end 
+                end,              
+        get = function(info) return db.char.autoSendHash end
       },
       useProfileData = {
         name = L["Use raid leader data from:"],
@@ -1271,7 +1287,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
     if IsInRaid() then
       print("player in raid")
       -- Random delay between 10-30 secs to send hash to /raid
-      if raiderDB.char.bossListHash and raiderDB.char.bossListHash ~= "" and not iwtb.hashSentToRaid then
+      if db.char.autoSendHash and raiderDB.char.bossListHash and raiderDB.char.bossListHash ~= "" and not iwtb.hashSentToRaid then
         print("Auto send hash to raid in 10-30 secs")
         self:ScheduleTimer("autoSendHash", math.random(10,30))
       end
@@ -1533,7 +1549,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   end)
   --raiderTestButton:SetScript("OnEnter", function(s) print("enter"); s.texture:SetTexture(GlowBorderTemplate) end)
   --raiderTestButton:SetScript("OnLeave", function(s) s.texture:SetTexture(texture) end)
-  --raiderTestButton:Hide()
+  raiderTestButton:Hide()
   
   -- Raider close button
   raiderFrames.raiderCloseButton = CreateFrame("Button", "iwtbraiderCloseButton", iwtb.raiderTab, "UIPanelButtonTemplate")
