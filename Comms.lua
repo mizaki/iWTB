@@ -39,13 +39,14 @@ iwtb.hashData = function (data)
     for instid,inst_tbl in pairs(inData) do
       for bossid,boss_tbl in pairsByKeys(inst_tbl) do
         table.insert(outData,{[bossid] = {boss_tbl}})
-        -- Need to array desireid and note? Appears not so far.
+        -- Need to array desireid and note?
       end
     end
   end
   
   orderData(data)
   --iwtb.print_table(outData)
+  
   local serData = Serializer:Serialize(outData)
   local hash = Compressor:fcs32init()
   hash = Compressor:fcs32update(hash, serData)
@@ -110,7 +111,7 @@ end
 -- Send data
 iwtb.sendData = function (prefix, data, target) 
   --data.commSpec = commSpec
-  print("target: ",target)
+  --print("target: ",target)
   local odata = data
   local sType
   
@@ -177,7 +178,7 @@ local function xferData(prefix, text, distribution, sender)
       --iwtb.raidLeaderDB.char.raiders[sender].expac = data.expac
       iwtb.rlProfileDB.profile.raiders[sender].raids = data.raids
       iwtb.rlProfileDB.profile.raiders[sender].bossListHash = iwtb.hashData(data.raids)
-      print("rl-hash: ", iwtb.rlProfileDB.profile.raiders[sender].bossListHash)
+      --print("rl-hash: ", iwtb.rlProfileDB.profile.raiders[sender].bossListHash)
       iwtb.setStatusText("raidleader", L["Received update - "] .. sender)
     else
       iwtb.setStatusText("raidleader", L["Ignored non-guild member data - "] .. sender)
@@ -192,14 +193,13 @@ local function requestData(prefix, text, distribution, sender)
     iwtb.setStatusText("raider", L["Sent data to "] .. sender)
 end
 
--- TODO: RL sends the boss list hash they currently have. If it's different to the raiders, they send updated data?
 local function xferHash(prefix, text, distribution, sender)
   dbRLRaiderCheck(sender)
-  print("raider-type: ", type(text), "rl-type: ", type(iwtb.rlProfileDB.profile.raiders[sender].bossListHash))
   print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.rlProfileDB.profile.raiders[sender].bossListHash))
   
   -- Compare hashes. If hash mismatch, request data from raider.
   if text ~= iwtb.rlProfileDB.profile.raiders[sender].bossListHash then
+    print("hash mismatch, requesting new data from ", sender)
     iwtb.sendData("rdata", "", sender)
   end
   
