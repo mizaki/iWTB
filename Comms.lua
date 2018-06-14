@@ -18,30 +18,25 @@ local XFER_DATA = "IWTB_XFER_DATA" -- Send raider data
 
 iwtb.hashData = function (data)
   local outData = {}
+  local i = 0
   
-  -- From https://www.lua.org/pil/19.3.html
-  local function pairsByKeys (t, f)
-    local a = {}
-    for n in pairs(t) do table.insert(a, n) end
-    table.sort(a, f)
-    local i = 0      -- iterator variable
-    local iter = function ()   -- iterator function
-      i = i + 1
-      if a[i] == nil then return nil
-      else return a[i], t[a[i]]
-      end
-    end
-    return iter
+  -- function for table.sort - order by bossid
+  local function sortBossIds(a,b)
+    return a[1] < b[1]
   end
   
-  -- Need to order data for a reliable hash. As table retrieval is arbitrary convert all _boss_ wants to an array.
+  -- Need to order data for a reliable hash. As table retrieval is arbitrary convert all _boss_ wants to a flattened array. We don't care about data layout just re-playable hash.
   local function orderData(inData) -- expects [instid][bossid]([desireid],[note])
     for instid,inst_tbl in pairs(inData) do
-      for bossid,boss_tbl in pairsByKeys(inst_tbl) do
-        table.insert(outData,{[bossid] = {boss_tbl}})
-        -- Need to array desireid and note?
+      for bossid,boss_tbl in pairs(inst_tbl) do
+        i = i + 1
+        outData[i] = {tonumber(bossid)}
+        for k,v in pairs(boss_tbl) do
+          table.insert(outData[i],v)
+        end
       end
     end
+    table.sort(outData, sortBossIds)
   end
   
   orderData(data)
