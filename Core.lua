@@ -18,33 +18,22 @@ local tierRaidInstances = nil -- Raid instances for raider tab dropdown
 local tierRLRaidInstances = nil 
 iwtb.instanceBosses = nil -- Bosses for RL tab dropdown
 local frame
---local windowframe -- main frame
---iwtb.raiderTab -- raider tab frame
---local rlTab -- raid leader tab frame
 local createMainFrame
 local raiderBossListFrame -- main frame listing bosses (raider)
 iwtb.rlRaiderListFrame = {} -- main frame listing raiders spots
---iwtb.rlRaiderOverviewFrame -- main frame listing raid leaders overview
---local rlRaiderOverviewFrameSlots = {} -- raid leader overview slots
---local rlRaiderOverviewFrameColumns = {} -- overview columns
 iwtb.rlRaiderOverviewListFrame = {} -- overview pages
---local overviewCreatureFrame = {} -- Boss icon for overview columns
 local bossKillPopup -- Pop up frame for changing desire on boss kill
 local bossKillPopupSelectedDesireId = 0
 iwtb.grpMemFrame = {} -- table containing each frame per group
 iwtb.grpMemSlotFrame = {} -- table containing each frame per slot for each group
---iwtb.rlRaiderNotListFrame -- main frame listing raiders NOT in the raid but in the rl db
---local rlOoRcontentSlots = {} -- Out of Raid slots
 local bossFrame = {}-- table of frames containing each boss frame
 local raiderBossesStr = "" -- raider boss desire seralised
 iwtb.desire = {L["BiS"], L["Need"], L["Minor"], L["Off spec"], L["No need"]}
 local bossDesire = nil
 local bossKillInfo = {bossid = 0, desireid = 0, expacid = 0, instid = 0}
-
+local gameTOCversion = 0
 local raiderSelectedTier = {} -- Tier ID from dropdown Must be a better way but cba for now.
 iwtb.rlSelectedTier = {} -- Must be a better way but cba for now.
-
---local rlStatusContent = {} -- RL status lines 1-10
 
 --Dropdown menu frames
 local expacButton = nil
@@ -520,6 +509,7 @@ function iwtb:OnInitialize()
   
   rankInfo = getGuildRanks()
   expacInfo = getExpansions()
+  gameTOCversion = select(4, GetBuildInfo())
   
   local options = {
     type = "group",
@@ -1221,7 +1211,13 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   
   -- BOSS_KILL
   local function bossKilled(e, id, name)
-    local curInst = EJ_GetCurrentInstance() -- 946, antorus - For 8.0 use EJ_GetInstanceForMap(C_Map.GetBestMapForUnit("player"))
+    local curInst = 0 -- EJ_GetCurrentInstance() -- 946, antorus - For 8.0 use EJ_GetInstanceForMap(C_Map.GetBestMapForUnit("player"))
+    if gameTOCversion < 80000 then
+      curInst = EJ_GetCurrentInstance()
+    else
+      curInst = EJ_GetInstanceForMap(C_Map.GetBestMapForUnit("player"))
+    end
+    
     --for testing
     if curInst == 0 then curInst = 946 end
     
