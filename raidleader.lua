@@ -101,13 +101,18 @@ function iwtb.slotDropDown_Menu(frame, level, menuList)
       info = L_UIDropDownMenu_CreateInfo()
       info.func = function(s, arg1, arg2, checked)
         iwtb.sendData("rdata", "", name)
-        print(name)
       end
       info.text = L["Request data"]
       info.arg1 = name
       info.notCheckable = true
       L_UIDropDownMenu_AddButton(info)
     end
+    
+    info = L_UIDropDownMenu_CreateInfo()
+    info.func = function(s, arg1, arg2, checked) table.insert(iwtb.rlProfileDB.profile.blacklist,name) end
+    info.text = L["Blacklist"]
+    info.notCheckable = true
+    L_UIDropDownMenu_AddButton(info)
     
     info = L_UIDropDownMenu_CreateInfo()
     info.text = L["Cancel"]

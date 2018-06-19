@@ -32,6 +32,7 @@ L["Remove data"] = true
 L["Remove"] = true
 L["Cancel"] = true
 L["Request data"] = true
+L["Blacklist"] = true
 
 -- Buttons
 L["Add note"] = true
@@ -80,6 +81,7 @@ L["Enter upto three numbers, e.g. 45, 60, 120"] = true
 L["If checked, will automatically hide this window after the set interval"] = true
 L["Use raid leader data from:"] = true
 L["Use the raid leader data from another profile\/character"] = true
+L["Blacklisted names. Click checkbox to remove"] = true
 
 -- Status messages
 L["Received update - "] = true
@@ -88,6 +90,7 @@ L["Sent data to raid group"] = true
 L["Sent data to "] = true
 L["Need to be in a raid group"] = true
 L["Ignored non-guild member data - "] = true
+L["Ignored blacklisted member data - "] = true
 L["Ignored data. Change in options to receive data"] = true
 L["Failed to find boss name: "] = true
 L["Updated raider DB"] = true

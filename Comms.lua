@@ -31,7 +31,7 @@ iwtb.hashData = function (data)
       for bossid,boss_tbl in pairs(inst_tbl) do
         i = i + 1
         outData[i] = {tonumber(bossid)}
-        for k,v in pairs(boss_tbl) do
+        for k,v in pairs(boss_tbl) do -- need to order desire,note?
           table.insert(outData[i],v)
         end
       end
@@ -142,6 +142,18 @@ iwtb.autoSendHash = function()
   iwtb.hashSentToRaid = true
 end
 
+local function onBlacklist(name)
+  for i=1, #iwtb.rlProfileDB.profile.blacklist do
+    print(iwtb.rlProfileDB.profile.blacklist[i])
+    if iwtb.rlProfileDB.profile.blacklist[i] == name then
+      print("found on bl")
+      return true
+    end
+  end
+  print("bl: false")
+  return false
+end
+
 ------------------------------------
 -- Listening functions
 ------------------------------------
@@ -166,6 +178,9 @@ local function xferData(prefix, text, distribution, sender)
     return
   elseif iwtb.db.char.ignoreAll then
     iwtb.setStatusText("raidleader", L["Ignored data. Change in options to receive data"])
+    return
+  elseif onBlacklist(sender) then
+    iwtb.setStatusText("raidleader", L["Ignored blacklisted member data - "] .. sender)
     return
   else
     if not iwtb.db.char.syncOnlyGuild or (iwtb.db.char.syncOnlyGuild and iwtb.isGuildMember(sender)) then

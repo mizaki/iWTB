@@ -465,6 +465,7 @@ function iwtb:OnInitialize()
   local rlProfileDefaults = { -- for future - boss required number tanks/healers/dps (dps is auto filled in assuming 20 or allow set max?)
     profile = {
       raiders = {},
+      blacklist = {},
     },
   }
   
@@ -524,21 +525,18 @@ function iwtb:OnInitialize()
         order = 10,
         type = "header",
       },
-      --[[syncOnJoin = { -- TODO
-        name = L["Request update on player join"],
-        order = 2,
-        desc = L["Request an update from a player when they join the raid"],
-        width = "double",
-        type = "toggle",
+      blacklist = {
+        name = L["Blacklist"],
+        desc = L["Blacklisted names. Click checkbox to remove"],
+        order = 16,
+        width = "full",
+        type = "multiselect",
+        values = iwtb.rlProfileDB.profile.blacklist,
         set = function(info,val)
-                if val then 
-                  db.char.syncOnJoin = true
-                else 
-                  db.char.syncOnJoin = false
-                end 
+                  table.remove(iwtb.rlProfileDB.profile.blacklist,val)
                 end,              
-        get = function(info) return db.char.syncOnJoin end
-      },]]
+        get = function(info, key)  end
+      },
       showTutorial = {
         name = L["Show tutorial window"],
         order = 2,
