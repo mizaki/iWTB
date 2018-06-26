@@ -137,20 +137,16 @@ end
 
 -- Send hash to /raid
 iwtb.autoSendHash = function()
-  print("auto-sending hash")
   iwtb.sendData("shash", iwtb.raiderDB.char.bossListHash, "raid")
   iwtb.hashSentToRaid = true
 end
 
 local function onBlacklist(name)
   for i=1, #iwtb.rlProfileDB.profile.blacklist do
-    print(iwtb.rlProfileDB.profile.blacklist[i])
     if iwtb.rlProfileDB.profile.blacklist[i] == name then
-      print("found on bl")
       return true
     end
   end
-  print("bl: false")
   return false
 end
 
@@ -205,11 +201,10 @@ end
 
 local function xferHash(prefix, text, distribution, sender)
   dbRLRaiderCheck(sender)
-  print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.rlProfileDB.profile.raiders[sender].bossListHash))
+  --print("Their hash: " .. text .. " Your hash: " .. tostring(iwtb.rlProfileDB.profile.raiders[sender].bossListHash))
   
   -- Compare hashes. If hash mismatch, request data from raider.
   if text ~= iwtb.rlProfileDB.profile.raiders[sender].bossListHash then
-    print("hash mismatch, requesting new data from ", sender)
     iwtb.sendData("rdata", "", sender)
   end
   

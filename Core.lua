@@ -819,7 +819,6 @@ function iwtb:OnEnable()
     
     -- Update hash
     raiderDB.char.bossListHash = iwtb.hashData(raiderDB.char.raids) -- Do we want to hash here? Better to do it before sending or on request?
-    print("raider-hash: ", raiderDB.char.bossListHash)
   end
     
   -- Fill menu with desirability list
@@ -1279,10 +1278,8 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   
   local function joinGroup(e, arg1,arg2,arg3,arg4,arg5)
     if IsInRaid() then
-      print("player in raid")
       -- Random delay between 10-30 secs to send hash to /raid
       if db.char.autoSendHash and raiderDB.char.bossListHash and raiderDB.char.bossListHash ~= "" and not iwtb.hashSentToRaid then
-        print("Auto send hash to raid in 10-30 secs")
         self:ScheduleTimer("autoSendHash", math.random(10,30))
       end
     end
@@ -1544,7 +1541,7 @@ function iwtb.raidsDropdownMenuOnClick(self, arg1, arg2, checked)
   end)
   --raiderTestButton:SetScript("OnEnter", function(s) print("enter"); s.texture:SetTexture(GlowBorderTemplate) end)
   --raiderTestButton:SetScript("OnLeave", function(s) s.texture:SetTexture(texture) end)
-  --raiderTestButton:Hide()
+  raiderTestButton:Hide()
   
   -- Raider close button
   raiderFrames.raiderCloseButton = CreateFrame("Button", "iwtbraiderCloseButton", iwtb.raiderTab, "UIPanelButtonTemplate")
