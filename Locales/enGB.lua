@@ -1,7 +1,5 @@
 -- Default language template
 
-print("Loading enGB")
-
 local L = LibStub("AceLocale-3.0"):NewLocale("iWTB", "enGB", true)
 
 -- General
